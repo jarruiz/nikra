@@ -77,7 +77,7 @@ databases:
   - name: nikra-db
     databaseName: nikra_db
     user: nikra_user
-    plan: standard  # Plan de producción permanente ($7/mes) - Sin límite de tiempo
+    # Sin especificar 'plan' - Render usará el plan por defecto disponible
     region: frankfurt  # Frankfurt - IMPORTANTE: Debe ser la misma región que el servicio web
     ipAllowList: []  # Vacío = accesible solo desde servicios de Render
 
