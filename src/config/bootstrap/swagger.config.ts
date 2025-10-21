@@ -6,7 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
  */
 export function setupSwagger(app: INestApplication): void {
   // Configuración del DocumentBuilder
-  const config = new DocumentBuilder()
+  const configBuilder = new DocumentBuilder()
     .setTitle('Nikra API')
     .setDescription(`
       ## Sistema de Digitalización de Campañas Promocionales - CCA Ceuta
@@ -40,9 +40,19 @@ export function setupSwagger(app: INestApplication): void {
         in: 'header',
       },
       'JWT-auth',
-    )
-    .addServer('http://localhost:3000', 'Desarrollo Local')
-    .addServer('https://api.nikra.cca.ceuta.es', 'Producción')
+    );
+
+  // Configurar servidores según el entorno
+  if (process.env.NODE_ENV === 'production') {
+    // En producción, agregar el servidor de Render
+    configBuilder.addServer('https://nikra-backend.onrender.com', 'Render (Producción)');
+    configBuilder.addServer('https://api.nikra.cca.ceuta.es', 'Dominio Personalizado');
+  } else {
+    // En desarrollo, usar localhost
+    configBuilder.addServer('http://localhost:3000', 'Desarrollo Local');
+  }
+
+  const config = configBuilder
     .addTag('auth', 'Autenticación y autorización')
     .addTag('users', 'Gestión de usuarios')
     .addTag('campaigns', 'Gestión de campañas')
