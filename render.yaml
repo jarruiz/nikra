@@ -13,7 +13,7 @@ services:
     region: frankfurt  # Frankfurt (Alemania) - Única región europea, óptima para España
     plan: starter  # Cambia a standard o professional según necesites
     branch: main  # Rama de Git que se desplegará
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npx nest build
     startCommand: npm run start:prod
     healthCheckPath: /
     
