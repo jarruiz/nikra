@@ -15,7 +15,7 @@ services:
     branch: main  # Rama de Git que se desplegará
     buildCommand: npm install --include=dev && npx nest build
     startCommand: npm run start:prod
-    healthCheckPath: /
+    healthCheckPath: /api/docs
     
     # Variables de entorno
     envVars:
