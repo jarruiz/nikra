@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Script de ayuda para manejo de migraciones
+
+echo "🔄 Comandos de Migraciones Disponibles:"
+echo ""
+echo "📋 Ver estado de migraciones:"
+echo "   npm run migration:show"
+echo ""
+echo "🚀 Generar nueva migración (después de cambiar entidades):"
+echo "   npm run typeorm migration:generate src/database/migrations/NombreMigracion"
+echo ""
+echo "▶️  Ejecutar migraciones pendientes:"
+echo "   npm run migration:run"
+echo ""
+echo "⏪ Revertir última migración:"
+echo "   npm run migration:revert"
+echo ""
+echo "🏗️  Crear migración vacía (para scripts personalizados):"
+echo "   npm run typeorm migration:create src/database/migrations/NombreMigracion"
+echo ""
+echo "🧹 Limpiar base de datos (CUIDADO - elimina todos los datos):"
+echo "   npm run db:reset"
+echo ""
+echo "📊 Ver estructura de base de datos:"
+echo "   npm run db:status"
