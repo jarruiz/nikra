@@ -1,0 +1,29 @@
+# ==============================================
+# 🔐 ARCHIVOS SENSIBLES - NO COMMITEAR
+# ==============================================
+
+# Archivos con secrets generados
+.env.render
+.env.render.*
+*.env.render
+*.env.render.*
+
+# Archivos de backup
+*.backup
+*.backup.*
+
+# Variables para Render
+render-variables.txt
+
+# Scripts de configuración generados
+configure-render-cli.sh
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+
+# Outputs de scripts
+*.out
+*.output
+

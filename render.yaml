@@ -1,0 +1,83 @@
+# ==============================================
+# 🚀 CONFIGURACIÓN DE RENDER
+# ==============================================
+# Este archivo define la infraestructura en Render
+
+services:
+  # ==============================================
+  # 🎯 SERVICIO WEB (Backend NestJS)
+  # ==============================================
+  - type: web
+    name: nikra-backend
+    env: node
+    region: frankfurt  # Frankfurt (Alemania) - Única región europea, óptima para España
+    plan: starter  # Cambia a standard o professional según necesites
+    branch: main  # Rama de Git que se desplegará
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /
+    
+    # Variables de entorno
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: PORT
+        value: 3000
+      
+      # Base de datos (vinculada al servicio de PostgreSQL abajo)
+      - key: DB_HOST
+        fromDatabase:
+          name: nikra-db
+          property: host
+      
+      - key: DB_PORT
+        fromDatabase:
+          name: nikra-db
+          property: port
+      
+      - key: DB_USERNAME
+        fromDatabase:
+          name: nikra-db
+          property: user
+      
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nikra-db
+          property: password
+      
+      - key: DB_DATABASE
+        fromDatabase:
+          name: nikra-db
+          property: database
+      
+      # JWT Secrets (IMPORTANTE: Genera valores seguros)
+      - key: JWT_SECRET
+        generateValue: true
+      
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+    
+    # Disco persistente para archivos subidos
+    disk:
+      name: uploads
+      mountPath: /app/uploads
+      sizeGB: 10
+
+# ==============================================
+# 🗄️ BASE DE DATOS POSTGRESQL
+# ==============================================
+databases:
+  - name: nikra-db
+    databaseName: nikra_db
+    user: nikra_user
+    plan: starter  # Cambia según tus necesidades (free, starter, standard, etc.)
+    region: frankfurt  # Frankfurt - IMPORTANTE: Debe ser la misma región que el servicio web
+    ipAllowList: []  # Vacío = accesible solo desde servicios de Render
+

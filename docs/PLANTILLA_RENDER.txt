@@ -1,0 +1,197 @@
+=======================================================================
+🚀 PLANTILLA DE CONFIGURACIÓN PARA RENDER
+=======================================================================
+
+Esta plantilla contiene toda la información necesaria para configurar
+tu servicio en Render. Copia y pega los valores correspondientes.
+
+=======================================================================
+PASO 1: CREAR BASE DE DATOS POSTGRESQL
+=======================================================================
+
+Ve a: New + → PostgreSQL
+
+Configuración:
+- Name: nikra-db
+- Database: nikra_db
+- User: nikra_user
+- Region: Frankfurt (o tu región preferida)
+- Plan: Starter ($7/mes) o Free para pruebas
+
+Después de crear, GUARDA las credenciales que aparecen.
+
+=======================================================================
+PASO 2: CREAR SERVICIO WEB
+=======================================================================
+
+Ve a: New + → Web Service
+
+Configuración Básica:
+- Name: nikra-backend
+- Region: Frankfurt (misma que la BD)
+- Branch: main
+- Runtime: Node
+- Build Command: npm ci && npm run build
+- Start Command: npm run start:prod
+- Plan: Starter ($7/mes)
+
+=======================================================================
+PASO 3: CONFIGURAR VARIABLES DE ENTORNO
+=======================================================================
+
+En la sección "Advanced" → "Environment Variables", añade:
+
+--- COPIA DESDE AQUÍ ---
+
+NODE_ENV=production
+PORT=3000
+
+# Base de Datos (obtén estos valores de tu servicio PostgreSQL)
+DB_HOST=
+DB_PORT=5432
+DB_USERNAME=
+DB_PASSWORD=
+DB_DATABASE=nikra_db
+
+# JWT Secrets (IMPORTANTE: Genera valores seguros únicos)
+# Ejecuta: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_SECRET=
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=
+JWT_REFRESH_EXPIRES_IN=7d
+
+--- HASTA AQUÍ ---
+
+💡 TIP: Render puede autocompletar las variables de BD si seleccionas
+tu base de datos desde el dropdown en cada campo DB_*.
+
+=======================================================================
+PASO 4: GENERAR JWT SECRETS
+=======================================================================
+
+IMPORTANTE: NO uses valores por defecto. Genera valores únicos.
+
+Opción A - Usando Node.js en tu terminal local:
+-----------------------------------------------
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+Ejecuta este comando DOS VECES para obtener:
+1. Valor para JWT_SECRET
+2. Valor para JWT_REFRESH_SECRET
+
+Opción B - Usando OpenSSL:
+---------------------------
+openssl rand -hex 32
+
+Opción C - Online (sitio seguro):
+----------------------------------
+https://generate-secret.vercel.app/32
+
+=======================================================================
+PASO 5: CONFIGURAR DISCO PERSISTENTE
+=======================================================================
+
+Después de crear el servicio web:
+
+1. Ve a tu servicio → "Disks" en el menú lateral
+2. Click en "Add Disk"
+3. Configura:
+   - Name: uploads
+   - Mount Path: /app/uploads
+   - Size: 10 GB
+
+Esto es NECESARIO para que los archivos subidos (avatares, carteles,
+logos) no se pierdan al redesplegar.
+
+=======================================================================
+PASO 6: EJECUTAR MIGRACIONES
+=======================================================================
+
+Una vez que el despliegue termine (estado "Live"):
+
+1. Ve a tu servicio web → "Shell"
+2. Ejecuta:
+
+npm run migration:run
+
+3. Verifica el estado:
+
+npm run migration:show
+
+=======================================================================
+PASO 7: VERIFICAR DESPLIEGUE
+=======================================================================
+
+Abre en tu navegador:
+
+https://tu-servicio.onrender.com/api/docs
+
+Deberías ver la documentación Swagger UI.
+
+=======================================================================
+CONFIGURACIÓN OPCIONAL
+=======================================================================
+
+CORS (si tu frontend está en otro dominio):
+--------------------------------------------
+CORS_ORIGIN=https://tu-frontend.com
+
+Dominio Personalizado:
+----------------------
+1. Ve a Settings → Custom Domains
+2. Click en "Add Custom Domain"
+3. Ingresa: api.tudominio.com
+4. Configura el registro CNAME en tu DNS:
+   api.tudominio.com → CNAME → tu-servicio.onrender.com
+
+=======================================================================
+CHECKLIST FINAL
+=======================================================================
+
+Verifica que todo esté correcto:
+
+[ ] Base de datos PostgreSQL creada y funcionando
+[ ] Servicio web desplegado (estado "Live")
+[ ] Todas las variables de entorno configuradas
+[ ] JWT_SECRET y JWT_REFRESH_SECRET tienen valores únicos seguros
+[ ] Disco persistente configurado en /app/uploads
+[ ] Migraciones ejecutadas correctamente
+[ ] Puedes acceder a /api/docs sin errores
+[ ] Pruebas de endpoints básicos funcionan
+
+=======================================================================
+COSTOS ESTIMADOS (PRODUCCIÓN)
+=======================================================================
+
+Web Service (Starter):     $7/mes
+PostgreSQL (Starter):      $7/mes
+Disk 10GB:                 $0 (incluido)
+                          -------
+TOTAL:                    ~$14/mes
+
+Nota: Render ofrece $5 de crédito gratis mensual = ~$9/mes real
+
+Para desarrollo/testing: Usa plan Free (expira en 90 días)
+
+=======================================================================
+RECURSOS Y SOPORTE
+=======================================================================
+
+📖 Guías completas:
+   - docs/INICIO_RAPIDO_RENDER.md
+   - docs/DESPLIEGUE_RENDER.md
+   - docs/VARIABLES_ENTORNO.md
+
+🌐 Render Docs:
+   https://render.com/docs
+
+💬 Render Community:
+   https://community.render.com
+
+📧 Soporte del proyecto:
+   creative.feelve@gmail.com
+
+=======================================================================
+
+¡Feliz despliegue! 🚀
+
