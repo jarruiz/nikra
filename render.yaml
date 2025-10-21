@@ -77,7 +77,7 @@ databases:
   - name: nikra-db
     databaseName: nikra_db
     user: nikra_user
-    plan: starter  # Cambia según tus necesidades (free, starter, standard, etc.)
+    plan: free  # Plan gratuito (90 días) - Cambia a standard ($7/mes) para producción
     region: frankfurt  # Frankfurt - IMPORTANTE: Debe ser la misma región que el servicio web
     ipAllowList: []  # Vacío = accesible solo desde servicios de Render
 
