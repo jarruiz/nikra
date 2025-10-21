@@ -28,7 +28,7 @@ git status
 git add .
 
 # Commitear (los secrets NO se incluyen, están en .gitignore)
-git commit -m "feat: add Render deployment configuration with automated scripts"
+git commit -m "feat: deploy automático"
 
 # Pushear a tu rama principal
 git push origin main
