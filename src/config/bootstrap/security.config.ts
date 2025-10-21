@@ -36,11 +36,40 @@ export function setupSecurity(app: INestApplication): void {
     }
   }));
 
-  // CORS
+  // CORS - Configuración de orígenes permitidos
+  const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    : [
+        'http://localhost:3000',
+        'http://localhost:4200',
+        'https://ccaceuta.com',
+        'https://www.ccaceuta.com',
+      ];
+
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: (origin, callback) => {
+      // Permitir peticiones sin origin (como Postman, curl, mobile apps)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Verificar si el origin está en la lista de permitidos
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.warn(`⚠️  CORS: Origen no permitido: ${origin}`);
+        callback(new Error('No permitido por CORS'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Authorization'],
+    maxAge: 86400, // 24 horas de cache de preflight
   });
+
+  // Log de configuración en desarrollo
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🌐 CORS configurado para:', allowedOrigins);
+  }
 }

@@ -63,6 +63,10 @@ services:
       
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
+      
+      # CORS - Orígenes permitidos (separados por comas)
+      - key: ALLOWED_ORIGINS
+        value: https://ccaceuta.com,https://www.ccaceuta.com,http://localhost:3000,http://localhost:4200
     
     # Disco persistente para archivos subidos
     disk:
