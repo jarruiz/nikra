@@ -324,7 +324,43 @@ npm run test:poo
 
 ## 🐳 Despliegue
 
-### Docker Compose
+### 🚀 Despliegue en Render (Recomendado para Producción)
+
+Esta aplicación está lista para desplegarse en [Render](https://render.com) con **scripts automatizados** y configuración completa.
+
+#### ⚡ Despliegue Automatizado
+
+```bash
+# 1. Genera secrets seguros automáticamente
+cd deploy
+./generate-secrets.sh
+
+# 2. Despliega con script interactivo (guía paso a paso)
+./deploy-to-render.sh
+
+# 3. Verifica que todo funcione
+./verify-deployment.sh https://tu-servicio.onrender.com
+```
+
+#### 📚 Documentación Completa
+
+- **[🔧 Scripts de Deploy](./deploy/README.md)** - Scripts automatizados (EMPIEZA AQUÍ)
+- **[⚡ Inicio Rápido](./docs/INICIO_RAPIDO_RENDER.md)** - Despliega en 10 minutos
+- **[📖 Guía Completa](./docs/DESPLIEGUE_RENDER.md)** - Documentación detallada
+- **[🔐 Variables de Entorno](./docs/VARIABLES_ENTORNO.md)** - Configuración de secrets
+- **[✅ Checklist](./CHECKLIST_DESPLIEGUE.md)** - Verificación paso a paso
+
+#### 🎯 Características
+
+- ✅ **Generación automática de secrets** (JWT, DB passwords)
+- ✅ PostgreSQL incluido
+- ✅ Despliegue automático desde Git
+- ✅ SSL/HTTPS gratuito
+- ✅ Almacenamiento persistente para archivos
+- ✅ Scripts de verificación
+- ✅ Desde $7/mes
+
+### Docker Compose (Desarrollo Local)
 
 ```bash
 # Servicios de desarrollo

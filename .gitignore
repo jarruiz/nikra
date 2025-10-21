@@ -61,3 +61,11 @@ Thumbs.db
 # Temporary folders
 tmp/
 temp/
+
+# Deploy secrets and sensitive files
+deploy/.env.render
+deploy/.env.render.*
+deploy/render-variables.txt
+deploy/configure-render-cli.sh
+deploy/*.backup
+deploy/*.backup.*
