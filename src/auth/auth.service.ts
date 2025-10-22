@@ -119,8 +119,7 @@ export class AuthService {
     const payload = { 
       sub: user.id, 
       email: user.email, 
-      nombre: user.nombre,
-      apellidos: user.apellidos,
+      fullName: user.fullName,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -129,8 +128,7 @@ export class AuthService {
     const refreshPayload = { 
       sub: user.id, 
       email: user.email, 
-      nombre: user.nombre,
-      apellidos: user.apellidos,
+      fullName: user.fullName,
       type: 'refresh' 
     };
     
@@ -151,10 +149,9 @@ export class AuthService {
   private toUserProfileDto(user: User): UserProfileDto {
     return {
       id: user.id,
-      nombre: user.nombre,
-      apellidos: user.apellidos,
+      fullName: user.fullName,
       dni: user.dni,
-      direccion: user.direccion,
+      phone: user.phone,
       email: user.email,
       emailVerified: user.emailVerified,
       isActive: user.isActive,

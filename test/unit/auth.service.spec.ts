@@ -60,10 +60,9 @@ describe('AuthService', () => {
 
   describe('register', () => {
     const registerDto: RegisterDto = {
-      nombre: 'Juan',
-      apellidos: 'García López',
+      fullName: 'Juan García López',
       dni: '12345678A',
-      direccion: 'Calle Mayor 123, Ceuta',
+      phone: '+34612345678',
       email: 'juan@example.com',
       password: 'TestPassword123!',
     };

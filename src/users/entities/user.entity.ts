@@ -14,17 +14,14 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  nombre: string;
-
-  @Column({ type: 'varchar', length: 100 })
-  apellidos: string;
+  @Column({ type: 'varchar', length: 200 })
+  fullName: string;
 
   @Column({ type: 'varchar', length: 20, unique: true })
   dni: string;
 
-  @Column({ type: 'text' })
-  direccion: string;
+  @Column({ type: 'varchar', length: 15, nullable: true })
+  phone: string;
 
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;

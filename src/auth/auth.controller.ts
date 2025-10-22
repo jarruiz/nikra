@@ -93,10 +93,9 @@ export class AuthController {
     const user = await this.authService.findUserById(req.user.id);
     return {
       id: user.id,
-      nombre: user.nombre,
-      apellidos: user.apellidos,
+      fullName: user.fullName,
       dni: user.dni,
-      direccion: user.direccion,
+      phone: user.phone,
       email: user.email,
       emailVerified: user.emailVerified,
       isActive: user.isActive,
