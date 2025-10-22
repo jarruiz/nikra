@@ -44,6 +44,7 @@ export function setupSecurity(app: INestApplication): void {
         'http://localhost:4200',
         'https://ccaceuta.com',
         'https://www.ccaceuta.com',
+        'https://nikra-front.vercel.app',
       ];
 
   app.enableCors({
