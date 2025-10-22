@@ -69,3 +69,6 @@ deploy/render-variables.txt
 deploy/configure-render-cli.sh
 deploy/*.backup
 deploy/*.backup.*
+
+
+comercios.json
