@@ -1,35 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, MinLength, MaxLength, IsEmail } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MinLength, MaxLength, IsEmail, Matches } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class UpdateUserDto {
   @ApiProperty({
-    description: 'Nombre del usuario',
-    example: 'Juan',
+    description: 'Nombre completo del usuario',
+    example: 'Juan García López',
     minLength: 2,
-    maxLength: 100,
+    maxLength: 200,
   })
   @IsOptional()
-  @IsString({ message: 'El nombre debe ser una cadena de texto' })
-  @IsNotEmpty({ message: 'El nombre es requerido' })
-  @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres' })
-  @MaxLength(100, { message: 'El nombre no puede exceder 100 caracteres' })
+  @IsString({ message: 'El nombre completo debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El nombre completo es requerido' })
+  @MinLength(2, { message: 'El nombre completo debe tener al menos 2 caracteres' })
+  @MaxLength(200, { message: 'El nombre completo no puede exceder 200 caracteres' })
   @Transform(({ value }) => value?.trim())
-  nombre?: string;
-
-  @ApiProperty({
-    description: 'Apellidos del usuario',
-    example: 'García López',
-    minLength: 2,
-    maxLength: 100,
-  })
-  @IsOptional()
-  @IsString({ message: 'Los apellidos deben ser una cadena de texto' })
-  @IsNotEmpty({ message: 'Los apellidos son requeridos' })
-  @MinLength(2, { message: 'Los apellidos deben tener al menos 2 caracteres' })
-  @MaxLength(100, { message: 'Los apellidos no pueden exceder 100 caracteres' })
-  @Transform(({ value }) => value?.trim())
-  apellidos?: string;
+  fullName?: string;
 
   @ApiProperty({
     description: 'DNI del usuario',
@@ -46,15 +32,28 @@ export class UpdateUserDto {
   dni?: string;
 
   @ApiProperty({
-    description: 'Dirección del usuario',
-    example: 'Calle Mayor 123, Ceuta',
+    description: 'Teléfono móvil del usuario (formato español)',
+    example: '+34612345678',
+    required: false,
   })
   @IsOptional()
-  @IsString({ message: 'La dirección debe ser una cadena de texto' })
-  @IsNotEmpty({ message: 'La dirección es requerida' })
-  @MinLength(10, { message: 'La dirección debe tener al menos 10 caracteres' })
-  @Transform(({ value }) => value?.trim())
-  direccion?: string;
+  @IsString({ message: 'El teléfono debe ser una cadena de texto' })
+  @Matches(/^(\+34|0034)?[6789]\d{8}$/, {
+    message: 'Teléfono debe tener formato válido español (ej: +34612345678 o 612345678)',
+  })
+  @Transform(({ value }) => {
+    if (!value) return null;
+    let phone = value.trim().replace(/\s+/g, '');
+    if (phone.startsWith('0034')) {
+      phone = '+34' + phone.substring(4);
+    } else if (!phone.startsWith('+34') && !phone.startsWith('34')) {
+      phone = '+34' + phone;
+    } else if (phone.startsWith('34') && !phone.startsWith('+')) {
+      phone = '+' + phone;
+    }
+    return phone;
+  })
+  phone?: string;
 
   @ApiProperty({
     description: 'Email del usuario',

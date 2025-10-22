@@ -151,7 +151,7 @@ export class UsersService {
     const users = await this.userRepository
       .createQueryBuilder('user')
       .where(
-        '(user.nombre ILIKE :search OR user.apellidos ILIKE :search OR user.email ILIKE :search OR user.dni ILIKE :search)',
+        '(user.fullName ILIKE :search OR user.email ILIKE :search OR user.dni ILIKE :search OR user.phone ILIKE :search)',
         { search: `%${searchTerm}%` }
       )
       .andWhere('user.isActive = :active', { active: true })
@@ -190,10 +190,9 @@ export class UsersService {
   private toProfileDto(user: User): UserProfileDto {
     return {
       id: user.id,
-      nombre: user.nombre,
-      apellidos: user.apellidos,
+      fullName: user.fullName,
       dni: user.dni,
-      direccion: user.direccion,
+      phone: user.phone,
       email: user.email,
       emailVerified: user.emailVerified,
       isActive: user.isActive,

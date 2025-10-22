@@ -8,16 +8,10 @@ export class UserProfileDto {
   id: string;
 
   @ApiProperty({
-    description: 'Nombre del usuario',
-    example: 'Juan',
+    description: 'Nombre completo del usuario',
+    example: 'Juan García López',
   })
-  nombre: string;
-
-  @ApiProperty({
-    description: 'Apellidos del usuario',
-    example: 'García López',
-  })
-  apellidos: string;
+  fullName: string;
 
   @ApiProperty({
     description: 'DNI del usuario',
@@ -26,10 +20,11 @@ export class UserProfileDto {
   dni: string;
 
   @ApiProperty({
-    description: 'Dirección del usuario',
-    example: 'Calle Mayor 123, Ceuta',
+    description: 'Teléfono móvil del usuario',
+    example: '+34612345678',
+    nullable: true,
   })
-  direccion: string;
+  phone: string | null;
 
   @ApiProperty({
     description: 'Email del usuario',

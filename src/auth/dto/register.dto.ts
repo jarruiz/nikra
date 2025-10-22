@@ -6,35 +6,23 @@ import {
   MaxLength,
   Matches,
   IsNotEmpty,
+  IsOptional,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class RegisterDto {
   @ApiProperty({
-    description: 'Nombre del usuario',
-    example: 'Juan',
+    description: 'Nombre completo del usuario',
+    example: 'Juan Pérez García',
     minLength: 2,
-    maxLength: 100,
+    maxLength: 200,
   })
   @IsString()
   @IsNotEmpty()
   @MinLength(2)
-  @MaxLength(100)
+  @MaxLength(200)
   @Transform(({ value }) => value?.trim())
-  nombre: string;
-
-  @ApiProperty({
-    description: 'Apellidos del usuario',
-    example: 'Pérez García',
-    minLength: 2,
-    maxLength: 100,
-  })
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(2)
-  @MaxLength(100)
-  @Transform(({ value }) => value?.trim())
-  apellidos: string;
+  fullName: string;
 
   @ApiProperty({
     description: 'DNI del usuario',
@@ -49,21 +37,38 @@ export class RegisterDto {
   @Matches(/^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/, {
     message: 'DNI debe tener formato válido español (8 dígitos + letra)',
   })
-  @Transform(({ value }) => value?.trim())
+  @Transform(({ value }) => value?.trim().toUpperCase())
   dni: string;
 
   @ApiProperty({
-    description: 'Dirección del usuario',
-    example: 'Calle Mayor 123, 51001 Ceuta',
-    minLength: 10,
-    maxLength: 255,
+    description: 'Teléfono móvil del usuario (formato español)',
+    example: '+34612345678',
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @MinLength(10)
-  @MaxLength(255)
-  @Transform(({ value }) => value?.trim())
-  direccion: string;
+  @Matches(/^(\+34|0034)?[6789]\d{8}$/, {
+    message: 'Teléfono debe tener formato válido español (ej: +34612345678 o 612345678)',
+  })
+  @Transform(({ value }) => {
+    if (!value) return null;
+    // Normalizar el teléfono
+    let phone = value.trim().replace(/\s+/g, '');
+    // Si empieza con 00  34, convertir a +34
+    if (phone.startsWith('0034')) {
+      phone = '+34' + phone.substring(4);
+    }
+    // Si no tiene prefijo, añadir +34
+    else if (!phone.startsWith('+34') && !phone.startsWith('34')) {
+      phone = '+34' + phone;
+    }
+    // Si empieza con 34 (sin +), añadir +
+    else if (phone.startsWith('34') && !phone.startsWith('+')) {
+      phone = '+' + phone;
+    }
+    return phone;
+  })
+  phone?: string;
 
   @ApiProperty({
     description: 'Email del usuario',

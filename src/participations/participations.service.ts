@@ -233,9 +233,9 @@ export class ParticipationsService {
       // Incluir datos relacionados si están disponibles
       user: participation.user ? {
         id: participation.user.id,
-        nombre: participation.user.nombre,
-        apellidos: participation.user.apellidos,
+        fullName: participation.user.fullName,
         email: participation.user.email,
+        phone: participation.user.phone,
       } : undefined,
       associate: participation.associate ? {
         id: participation.associate.id,

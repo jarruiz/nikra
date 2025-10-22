@@ -52,9 +52,9 @@ export class ParticipationResponseDto {
   // Datos del usuario (opcional, se puede incluir en joins)
   user?: {
     id: string;
-    nombre: string;
-    apellidos: string;
+    fullName: string;
     email: string;
+    phone: string;
   };
 
   // Datos del comercio (opcional, se puede incluir en joins)
