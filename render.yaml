@@ -51,15 +51,15 @@ services:
           name: nikra-db
           property: database
       
-      # JWT Secrets (IMPORTANTE: Genera valores seguros)
+      # JWT Secrets (IMPORTANTE: Secret estático para consistencia)
       - key: JWT_SECRET
-        generateValue: true
+        value: nikra-jwt-secret-2025-production-secure-key-xyz789
       
       - key: JWT_EXPIRES_IN
         value: 24h
       
       - key: JWT_REFRESH_SECRET
-        generateValue: true
+        value: nikra-refresh-secret-2025-production-secure-key-abc123
       
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
