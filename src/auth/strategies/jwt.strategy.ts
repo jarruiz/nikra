@@ -20,7 +20,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     try {
+      // Verificar que el payload tenga la estructura esperada
+      if (!payload.sub) {
+        throw new UnauthorizedException('Token inválido: payload malformado');
+      }
+
       const user = await this.authService.findUserById(payload.sub);
+      
+      if (!user) {
+        throw new UnauthorizedException('Usuario no encontrado');
+      }
       
       if (!user.isActive) {
         throw new UnauthorizedException('Usuario inactivo');
@@ -33,7 +42,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         emailVerified: user.emailVerified,
       };
     } catch (error) {
-      throw new UnauthorizedException('Token inválido');
+      console.error('JWT Validation Error:', error.message);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Token inválido o expirado');
     }
   }
 }
