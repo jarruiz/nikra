@@ -16,6 +16,9 @@ async function bootstrap() {
   // Crear aplicación NestJS con soporte para Express estático
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Configurar prefijo global para API
+  app.setGlobalPrefix('api');
+
   // Configurar archivos estáticos (imágenes)
   setupStaticFiles(app);
 
