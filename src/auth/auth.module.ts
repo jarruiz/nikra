@@ -19,6 +19,10 @@ import { LocalStrategy } from './strategies/local.strategy';
       useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('jwt.secret') || 'default-secret';
         const expiresIn = configService.get<string>('jwt.expiresIn') || '24h'; // Cambio por defecto a 24h
+        
+        console.log('🔐 JWT Module - Secret:', secret ? '✅ Presente' : '❌ Ausente');
+        console.log('🔐 JWT Module - ExpiresIn:', expiresIn);
+        
         return {
           secret,
           signOptions: {
