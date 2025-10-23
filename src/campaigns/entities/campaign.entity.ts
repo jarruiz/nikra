@@ -17,6 +17,12 @@ export class Campaign {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
+  @Column({ type: 'timestamp', nullable: true })
+  fechaInicio: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  fechaFin: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 

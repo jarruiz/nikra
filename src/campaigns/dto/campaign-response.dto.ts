@@ -31,6 +31,18 @@ export class CampaignResponseDto {
   })
   isActive: boolean;
 
+  @ApiPropertyOptional({
+    description: 'Fecha de inicio de la campaña',
+    example: '2025-01-15T00:00:00.000Z',
+  })
+  fechaInicio?: Date;
+
+  @ApiPropertyOptional({
+    description: 'Fecha de finalización de la campaña',
+    example: '2025-02-15T23:59:59.000Z',
+  })
+  fechaFin?: Date;
+
   @ApiProperty({
     description: 'Fecha de creación de la campaña',
     example: '2025-01-18T10:30:00.000Z',

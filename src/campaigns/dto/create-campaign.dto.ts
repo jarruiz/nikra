@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, MinLength, MaxLength, IsDateString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateCampaignDto {
@@ -45,4 +45,24 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsBoolean({ message: 'isActive debe ser un valor booleano' })
   isActive?: boolean = true;
+
+  @ApiPropertyOptional({
+    description: 'Fecha de inicio de la campaña',
+    example: '2025-01-15T00:00:00.000Z',
+    type: 'string',
+    format: 'date-time',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'fechaInicio debe ser una fecha válida en formato ISO' })
+  fechaInicio?: string;
+
+  @ApiPropertyOptional({
+    description: 'Fecha de finalización de la campaña',
+    example: '2025-02-15T23:59:59.000Z',
+    type: 'string',
+    format: 'date-time',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'fechaFin debe ser una fecha válida en formato ISO' })
+  fechaFin?: string;
 }
