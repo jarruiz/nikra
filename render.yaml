@@ -64,6 +64,13 @@ services:
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
       
+      # Rate Limiting - Configuración optimizada
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000  # 15 minutos en milisegundos
+      
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 1000    # 1000 requests por ventana (66.7 req/min)
+      
       # CORS - Orígenes permitidos (separados por comas)
       - key: ALLOWED_ORIGINS
         value: https://ccaceuta.com,https://www.ccaceuta.com,https://nikra-front.vercel.app,https://nikra-backend.onrender.com,https://sorteos.centrocomercialabiertodeceuta.es,http://localhost:3000,http://localhost:4200

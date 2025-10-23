@@ -19,6 +19,16 @@ async function bootstrap() {
   // Configurar prefijo global para API
   app.setGlobalPrefix('api');
 
+  // Health check endpoint (sin rate limiting)
+  app.use('/api/health', (req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+
   // Configurar archivos estáticos (imágenes)
   setupStaticFiles(app);
 
