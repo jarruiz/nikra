@@ -26,13 +26,23 @@ export function setupSecurity(app: INestApplication): void {
     xssFilter: true
   }));
 
-  // Rate Limiting global
+  // Rate Limiting global - Configuración optimizada para uso fluido
+  const rateLimitWindowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'); // 15 min por defecto
+  const rateLimitMaxRequests = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'); // 1000 req por defecto
+  
   app.use(rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // límite cada IP por ventana de tiempo
+    windowMs: rateLimitWindowMs,
+    max: rateLimitMaxRequests,
     message: {
       error: 'Demasiadas peticiones desde esta IP, inténtelo más tarde.',
-      statusCode: 429
+      statusCode: 429,
+      retryAfter: `${Math.ceil(rateLimitWindowMs / 60000)} minutos`
+    },
+    standardHeaders: true, // Retornar rate limit info en headers
+    legacyHeaders: false, // Deshabilitar headers legacy
+    skip: (req) => {
+      // Saltar rate limiting para health checks y docs
+      return req.path === '/api/docs' || req.path === '/api/health';
     }
   }));
 
@@ -79,5 +89,10 @@ export function setupSecurity(app: INestApplication): void {
   // Log de configuración en desarrollo
   if (process.env.NODE_ENV !== 'production') {
     console.log('🌐 CORS configurado para:', allowedOrigins);
+    console.log('⏱️ Rate Limiting configurado:', {
+      windowMs: rateLimitWindowMs,
+      maxRequests: rateLimitMaxRequests,
+      requestsPerMinute: Math.round(rateLimitMaxRequests / (rateLimitWindowMs / 60000))
+    });
   }
 }
