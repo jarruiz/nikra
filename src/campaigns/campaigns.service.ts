@@ -29,7 +29,14 @@ export class CampaignsService {
       throw new ConflictException('Ya existe una campaña con este nombre');
     }
 
-    const campaign = this.campaignRepository.create(createCampaignDto);
+    // Convertir fechas de string a Date si están presentes
+    const campaignData = {
+      ...createCampaignDto,
+      fechaInicio: createCampaignDto.fechaInicio ? new Date(createCampaignDto.fechaInicio) : null,
+      fechaFin: createCampaignDto.fechaFin ? new Date(createCampaignDto.fechaFin) : null,
+    };
+
+    const campaign = this.campaignRepository.create(campaignData);
     const savedCampaign = await this.campaignRepository.save(campaign);
 
     return this.toResponseDto(savedCampaign);
@@ -107,11 +114,16 @@ export class CampaignsService {
       }
     }
 
-    // Actualizar campaña
-    await this.campaignRepository.update(id, {
+    // Convertir fechas de string a Date si están presentes
+    const updateData = {
       ...updateCampaignDto,
+      fechaInicio: updateCampaignDto.fechaInicio ? new Date(updateCampaignDto.fechaInicio) : updateCampaignDto.fechaInicio,
+      fechaFin: updateCampaignDto.fechaFin ? new Date(updateCampaignDto.fechaFin) : updateCampaignDto.fechaFin,
       updatedAt: new Date(),
-    });
+    };
+
+    // Actualizar campaña
+    await this.campaignRepository.update(id, updateData);
 
     // Obtener campaña actualizada
     const updatedCampaign = await this.findById(id);
@@ -168,6 +180,8 @@ export class CampaignsService {
       descripcion: originalCampaign.descripcion,
       imagenUrl: originalCampaign.imagenUrl,
       isActive: false, // La copia inicia inactiva
+      fechaInicio: originalCampaign.fechaInicio,
+      fechaFin: originalCampaign.fechaFin,
     };
 
     // Verificar que el nombre de la copia no existe
@@ -206,6 +220,8 @@ export class CampaignsService {
       descripcion: campaign.descripcion,
       imagenUrl: campaign.imagenUrl,
       isActive: campaign.isActive,
+      fechaInicio: campaign.fechaInicio,
+      fechaFin: campaign.fechaFin,
       createdAt: campaign.createdAt,
       updatedAt: campaign.updatedAt,
     };
