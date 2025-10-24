@@ -11,6 +11,17 @@ export interface UploadResult {
   size: number;
 }
 
+export interface BatchUploadResult {
+  successful: UploadResult[];
+  failed: Array<{
+    originalName: string;
+    error: string;
+  }>;
+  totalFiles: number;
+  successCount: number;
+  failureCount: number;
+}
+
 export interface FileInfo {
   path: string;
   mimetype: string;
@@ -65,6 +76,54 @@ export class UploadService {
       mimetype: file.mimetype,
       size: file.size,
     };
+  }
+
+  /**
+   * Guardar múltiples archivos en lote
+   */
+  async saveFiles(
+    files: Express.Multer.File[],
+    subfolder: 'avatars' | 'campaigns' | 'associates',
+  ): Promise<BatchUploadResult> {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files uploaded');
+    }
+
+    if (files.length > 10) {
+      throw new BadRequestException('Maximum 10 files allowed per batch');
+    }
+
+    const successful: UploadResult[] = [];
+    const failed: Array<{ originalName: string; error: string }> = [];
+
+    console.log(`📦 Procesando lote de ${files.length} archivos para ${subfolder}`);
+
+    for (const file of files) {
+      try {
+        const result = await this.saveFile(file, subfolder);
+        successful.push(result);
+        console.log(`✅ Archivo procesado: ${file.originalname} -> ${result.filename}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        failed.push({
+          originalName: file.originalname,
+          error: errorMessage,
+        });
+        console.log(`❌ Error procesando ${file.originalname}: ${errorMessage}`);
+      }
+    }
+
+    const result: BatchUploadResult = {
+      successful,
+      failed,
+      totalFiles: files.length,
+      successCount: successful.length,
+      failureCount: failed.length,
+    };
+
+    console.log(`📊 Resultado del lote: ${result.successCount}/${result.totalFiles} exitosos`);
+    
+    return result;
   }
 
   /**

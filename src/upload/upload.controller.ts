@@ -15,11 +15,12 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { UploadedFile } from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { UploadedFile, UploadedFiles } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UploadService, UploadResult } from './upload.service';
+import { UploadService, UploadResult, BatchUploadResult } from './upload.service';
 import { ApiFileUpload } from '../common/decorators/file-upload.decorator';
 
 @ApiTags('🖼️ File Upload')
@@ -177,5 +178,252 @@ export class UploadController {
   })
   async deleteAssociate(@Param('filename') filename: string): Promise<void> {
     return this.uploadService.deleteFile('associates', filename);
+  }
+
+  // ==============================================
+  // 📦 ENDPOINTS DE CARGA EN LOTE
+  // ==============================================
+
+  @Post('batch/avatars')
+  @UseInterceptors(FilesInterceptor('files', 10, {
+    fileFilter: (req, file, callback) => {
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (allowedMimes.includes(file.mimetype)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Solo se permiten archivos JPG, PNG y WebP'), false);
+      }
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB por archivo
+    },
+  }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Archivos de avatar (máximo 10)',
+        },
+      },
+      required: ['files'],
+    },
+  })
+  @ApiOperation({
+    summary: 'Subir múltiples avatares',
+    description: 'Sube múltiples archivos de avatar de una vez (máximo 10 archivos)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Avatares subidos exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        successful: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              filename: { type: 'string' },
+              originalName: { type: 'string' },
+              mimetype: { type: 'string' },
+              size: { type: 'number' },
+            },
+          },
+        },
+        failed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              originalName: { type: 'string' },
+              error: { type: 'string' },
+            },
+          },
+        },
+        totalFiles: { type: 'number' },
+        successCount: { type: 'number' },
+        failureCount: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Error en la validación de archivos',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido o expirado',
+  })
+  async uploadBatchAvatars(@UploadedFiles() files: Express.Multer.File[]): Promise<BatchUploadResult> {
+    return this.uploadService.saveFiles(files, 'avatars');
+  }
+
+  @Post('batch/campaigns')
+  @UseInterceptors(FilesInterceptor('files', 10, {
+    fileFilter: (req, file, callback) => {
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (allowedMimes.includes(file.mimetype)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Solo se permiten archivos JPG, PNG y WebP'), false);
+      }
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB por archivo
+    },
+  }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Archivos de carteles (máximo 10)',
+        },
+      },
+      required: ['files'],
+    },
+  })
+  @ApiOperation({
+    summary: 'Subir múltiples carteles de campaña',
+    description: 'Sube múltiples archivos de carteles de una vez (máximo 10 archivos)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Carteles subidos exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        successful: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              filename: { type: 'string' },
+              originalName: { type: 'string' },
+              mimetype: { type: 'string' },
+              size: { type: 'number' },
+            },
+          },
+        },
+        failed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              originalName: { type: 'string' },
+              error: { type: 'string' },
+            },
+          },
+        },
+        totalFiles: { type: 'number' },
+        successCount: { type: 'number' },
+        failureCount: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Error en la validación de archivos',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido o expirado',
+  })
+  async uploadBatchCampaigns(@UploadedFiles() files: Express.Multer.File[]): Promise<BatchUploadResult> {
+    return this.uploadService.saveFiles(files, 'campaigns');
+  }
+
+  @Post('batch/associates')
+  @UseInterceptors(FilesInterceptor('files', 10, {
+    fileFilter: (req, file, callback) => {
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+      if (allowedMimes.includes(file.mimetype)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Solo se permiten archivos JPG, PNG, WebP y SVG'), false);
+      }
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB por archivo
+    },
+  }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Archivos de logos (máximo 10)',
+        },
+      },
+      required: ['files'],
+    },
+  })
+  @ApiOperation({
+    summary: 'Subir múltiples logos de comercios',
+    description: 'Sube múltiples archivos de logos de comercios de una vez (máximo 10 archivos)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Logos subidos exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        successful: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              filename: { type: 'string' },
+              originalName: { type: 'string' },
+              mimetype: { type: 'string' },
+              size: { type: 'number' },
+            },
+          },
+        },
+        failed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              originalName: { type: 'string' },
+              error: { type: 'string' },
+            },
+          },
+        },
+        totalFiles: { type: 'number' },
+        successCount: { type: 'number' },
+        failureCount: { type: 'number' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Error en la validación de archivos',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Token inválido o expirado',
+  })
+  async uploadBatchAssociates(@UploadedFiles() files: Express.Multer.File[]): Promise<BatchUploadResult> {
+    return this.uploadService.saveFiles(files, 'associates');
   }
 }
