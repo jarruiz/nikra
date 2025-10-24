@@ -18,9 +18,18 @@ export interface FileInfo {
 
 @Injectable()
 export class UploadService {
-  private readonly uploadBasePath = 'uploads';
+  private readonly uploadBasePath: string;
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) {
+    // En producción (Render), usar el disco persistente montado en /app/uploads
+    // En desarrollo, usar la carpeta uploads local
+    this.uploadBasePath = process.env.NODE_ENV === 'production' 
+      ? '/app/uploads' 
+      : 'uploads';
+    
+    console.log(`📁 UploadService: Ruta base configurada como: ${this.uploadBasePath}`);
+    console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  }
 
   async saveFile(
     file: Express.Multer.File,
@@ -40,11 +49,15 @@ export class UploadService {
     const fileName = this.generateUniqueFileName(file.originalname);
     const filePath = path.join(this.uploadBasePath, subfolder, fileName);
 
+    console.log(`💾 Guardando archivo en: ${filePath}`);
+
     // Asegurar que el directorio existe
     await this.ensureDirectoryExists(path.join(this.uploadBasePath, subfolder));
 
     // Guardar el archivo
     await fs.writeFile(filePath, file.buffer);
+    
+    console.log(`✅ Archivo guardado exitosamente: ${fileName}`);
 
     return {
       filename: fileName,
@@ -63,17 +76,22 @@ export class UploadService {
   ): Promise<FileInfo> {
     const filePath = path.join(this.uploadBasePath, subfolder, filename);
     
+    console.log(`🔍 Buscando archivo en: ${filePath}`);
+    
     try {
       await fs.access(filePath);
       
       // Obtener el tipo MIME basado en la extensión
       const mimetype = this.getMimeTypeFromExtension(path.extname(filename));
       
+      console.log(`✅ Archivo encontrado: ${filename}`);
+      
       return {
         path: filePath,
         mimetype,
       };
     } catch (error) {
+      console.log(`❌ Archivo no encontrado: ${filename} en ${filePath}`);
       throw new NotFoundException(`Archivo no encontrado: ${filename}`);
     }
   }
