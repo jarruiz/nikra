@@ -72,3 +72,5 @@ deploy/*.backup.*
 
 
 comercios.json
+scripts/insert-comercios-actualizados.sql
+scripts/insert-comercios-safe.sql
