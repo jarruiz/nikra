@@ -185,7 +185,7 @@ export class UploadController {
   // ==============================================
 
   @Post('batch/campaigns')
-  @UseInterceptors(FilesInterceptor('files', 30, {
+  @UseInterceptors(FilesInterceptor('files', 25, {
     fileFilter: (req, file, callback) => {
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
       if (allowedMimes.includes(file.mimetype)) {
@@ -209,7 +209,7 @@ export class UploadController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Archivos de carteles (máximo 30)',
+          description: 'Archivos de carteles (máximo 25)',
         },
       },
       required: ['files'],
@@ -217,7 +217,7 @@ export class UploadController {
   })
   @ApiOperation({
     summary: 'Subir múltiples carteles de campaña',
-    description: 'Sube múltiples archivos de carteles de una vez (máximo 30 archivos)',
+    description: 'Sube múltiples archivos de carteles de una vez (máximo 25 archivos)',
   })
   @ApiResponse({
     status: 201,
@@ -266,7 +266,7 @@ export class UploadController {
   }
 
   @Post('batch/associates')
-  @UseInterceptors(FilesInterceptor('files', 30, {
+  @UseInterceptors(FilesInterceptor('files', 25, {
     fileFilter: (req, file, callback) => {
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
       if (allowedMimes.includes(file.mimetype)) {
@@ -290,7 +290,7 @@ export class UploadController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Archivos de logos (máximo 30)',
+          description: 'Archivos de logos (máximo 25)',
         },
       },
       required: ['files'],
@@ -298,7 +298,7 @@ export class UploadController {
   })
   @ApiOperation({
     summary: 'Subir múltiples logos de comercios',
-    description: 'Sube múltiples archivos de logos de comercios de una vez (máximo 30 archivos)',
+    description: 'Sube múltiples archivos de logos de comercios de una vez (máximo 25 archivos)',
   })
   @ApiResponse({
     status: 201,
