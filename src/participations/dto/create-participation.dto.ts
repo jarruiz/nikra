@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsUUID, IsDecimal, IsDateString, MinLength, MaxLength, Min } from 'class-validator';
+import { IsString, IsNotEmpty, IsUUID, IsNumber, IsDateString, MinLength, MaxLength, Min, Max } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class CreateParticipationDto {
@@ -38,9 +38,11 @@ export class CreateParticipationDto {
     description: 'Importe total de la compra en euros',
     example: 25.99,
     minimum: 0.01,
+    maximum: 999999.99,
   })
-  @IsDecimal({ decimal_digits: '0,2' }, { message: 'El importe debe ser un número decimal válido' })
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El importe debe ser un número válido con máximo 2 decimales' })
   @Type(() => Number)
   @Min(0.01, { message: 'El importe debe ser mayor a 0' })
+  @Max(999999.99, { message: 'El importe no puede exceder 999,999.99 euros' })
   importeTotal: number;
 }
