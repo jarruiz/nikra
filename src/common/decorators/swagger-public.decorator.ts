@@ -3,7 +3,6 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 /**
  * Decorador para documentar endpoints públicos en Swagger
- * Remueve la autenticación de la documentación de Swagger
  * 
  * @param summary - Resumen del endpoint
  * @param description - Descripción detallada

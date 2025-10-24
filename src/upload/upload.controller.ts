@@ -18,6 +18,7 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiParam,
+  ApiSecurity,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadedFile } from '@nestjs/common';
@@ -131,6 +132,7 @@ export class UploadController {
 
   @Get('avatar/:filename')
   @Public()
+  @ApiSecurity('')
   @ApiPublicOperation(
     'Obtener imagen de avatar',
     'Sirve una imagen de avatar por nombre de archivo'
@@ -159,6 +161,7 @@ export class UploadController {
 
   @Get('campaign/:filename')
   @Public()
+  @ApiSecurity('')
   @ApiPublicOperation(
     'Obtener cartel de campaña',
     'Sirve una imagen de cartel por nombre de archivo'
@@ -187,6 +190,7 @@ export class UploadController {
 
   @Get('associate/:filename')
   @Public()
+  @ApiSecurity('')
   @ApiPublicOperation(
     'Obtener logo de comercio',
     'Sirve una imagen de logo por nombre de archivo'
