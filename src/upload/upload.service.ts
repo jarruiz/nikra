@@ -89,8 +89,8 @@ export class UploadService {
       throw new BadRequestException('No files uploaded');
     }
 
-    if (files.length > 10) {
-      throw new BadRequestException('Maximum 10 files allowed per batch');
+    if (files.length > 30) {
+      throw new BadRequestException('Maximum 30 files allowed per batch');
     }
 
     const successful: UploadResult[] = [];
