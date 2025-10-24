@@ -1,15 +1,12 @@
 import {
   Controller,
   Post,
-  Get,
   UseGuards,
   Param,
   Delete,
   HttpCode,
   HttpStatus,
   UseInterceptors,
-  Res,
-  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,17 +15,12 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiParam,
-  ApiSecurity,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadedFile } from '@nestjs/common';
-import { Response } from 'express';
-import { promises as fs } from 'fs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UploadService, UploadResult } from './upload.service';
 import { ApiFileUpload } from '../common/decorators/file-upload.decorator';
-import { Public } from '../common/decorators/public.decorator';
-import { ApiPublicOperation } from '../common/decorators/swagger-public.decorator';
 
 @ApiTags('🖼️ File Upload')
 @Controller('upload')
@@ -130,114 +122,8 @@ export class UploadController {
     return this.uploadService.saveFile(file, 'associates');
   }
 
-  @Get('avatar/:filename')
-  @Public()
-  @ApiSecurity('')
-  @ApiPublicOperation(
-    'Obtener imagen de avatar',
-    'Sirve una imagen de avatar por nombre de archivo'
-  )
-  @ApiParam({
-    name: 'filename',
-    description: 'Nombre del archivo de avatar',
-    example: '1642123456789-abc123-avatar.jpg',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Imagen de avatar',
-    content: {
-      'image/jpeg': { schema: { type: 'string', format: 'binary' } },
-      'image/png': { schema: { type: 'string', format: 'binary' } },
-      'image/webp': { schema: { type: 'string', format: 'binary' } },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Archivo no encontrado',
-  })
-  async getAvatar(@Param('filename') filename: string, @Res() res: Response): Promise<void> {
-    await this.serveImage(res, 'avatars', filename);
-  }
-
-  @Get('campaign/:filename')
-  @Public()
-  @ApiSecurity('')
-  @ApiPublicOperation(
-    'Obtener cartel de campaña',
-    'Sirve una imagen de cartel por nombre de archivo'
-  )
-  @ApiParam({
-    name: 'filename',
-    description: 'Nombre del archivo de cartel',
-    example: '1642123456789-abc123-cartel.png',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Imagen de cartel',
-    content: {
-      'image/jpeg': { schema: { type: 'string', format: 'binary' } },
-      'image/png': { schema: { type: 'string', format: 'binary' } },
-      'image/webp': { schema: { type: 'string', format: 'binary' } },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Archivo no encontrado',
-  })
-  async getCampaign(@Param('filename') filename: string, @Res() res: Response): Promise<void> {
-    await this.serveImage(res, 'campaigns', filename);
-  }
-
-  @Get('associate/:filename')
-  @Public()
-  @ApiSecurity('')
-  @ApiPublicOperation(
-    'Obtener logo de comercio',
-    'Sirve una imagen de logo por nombre de archivo'
-  )
-  @ApiParam({
-    name: 'filename',
-    description: 'Nombre del archivo de logo',
-    example: '1642123456789-abc123-logo.svg',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Imagen de logo',
-    content: {
-      'image/jpeg': { schema: { type: 'string', format: 'binary' } },
-      'image/png': { schema: { type: 'string', format: 'binary' } },
-      'image/webp': { schema: { type: 'string', format: 'binary' } },
-      'image/svg+xml': { schema: { type: 'string', format: 'binary' } },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Archivo no encontrado',
-  })
-  async getAssociate(@Param('filename') filename: string, @Res() res: Response): Promise<void> {
-    await this.serveImage(res, 'associates', filename);
-  }
-
-  private async serveImage(
-    res: Response,
-    type: 'avatars' | 'campaigns' | 'associates',
-    filename: string,
-  ): Promise<void> {
-    try {
-      const fileInfo = await this.uploadService.getFileInfo(type, filename);
-      const fileBuffer = await fs.readFile(fileInfo.path);
-      
-      res.setHeader('Content-Type', fileInfo.mimetype);
-      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache por 1 año
-      res.send(fileBuffer);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        res.status(404).json({ message: error.message });
-      } else {
-        res.status(500).json({ message: 'Error interno del servidor' });
-      }
-    }
-  }
+  // Los endpoints GET de imágenes se han movido a upload-public.controller.ts
+  // para que aparezcan como públicos en Swagger (sin autenticación)
 
   @Delete('avatar/:filename')
   @HttpCode(HttpStatus.NO_CONTENT)
