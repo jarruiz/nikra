@@ -12,7 +12,7 @@ export function ApiFileUpload(description: string = 'Archivo a subir') {
     UseInterceptors(
       FileInterceptor('file', {
         limits: {
-          fileSize: 5 * 1024 * 1024, // 5MB
+          fileSize: 2 * 1024 * 1024, // 2MB
         },
         fileFilter: (req, file, callback) => {
           if (!file.mimetype.startsWith('image/')) {

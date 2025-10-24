@@ -185,7 +185,7 @@ export class UploadController {
   // ==============================================
 
   @Post('batch/campaigns')
-  @UseInterceptors(FilesInterceptor('files', 10, {
+  @UseInterceptors(FilesInterceptor('files', 30, {
     fileFilter: (req, file, callback) => {
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
       if (allowedMimes.includes(file.mimetype)) {
@@ -195,7 +195,7 @@ export class UploadController {
       }
     },
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB por archivo
+      fileSize: 2 * 1024 * 1024, // 2MB por archivo
     },
   }))
   @ApiConsumes('multipart/form-data')
@@ -209,7 +209,7 @@ export class UploadController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Archivos de carteles (máximo 10)',
+          description: 'Archivos de carteles (máximo 30)',
         },
       },
       required: ['files'],
@@ -217,7 +217,7 @@ export class UploadController {
   })
   @ApiOperation({
     summary: 'Subir múltiples carteles de campaña',
-    description: 'Sube múltiples archivos de carteles de una vez (máximo 10 archivos)',
+    description: 'Sube múltiples archivos de carteles de una vez (máximo 30 archivos)',
   })
   @ApiResponse({
     status: 201,
@@ -266,7 +266,7 @@ export class UploadController {
   }
 
   @Post('batch/associates')
-  @UseInterceptors(FilesInterceptor('files', 10, {
+  @UseInterceptors(FilesInterceptor('files', 30, {
     fileFilter: (req, file, callback) => {
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
       if (allowedMimes.includes(file.mimetype)) {
@@ -276,7 +276,7 @@ export class UploadController {
       }
     },
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB por archivo
+      fileSize: 2 * 1024 * 1024, // 2MB por archivo
     },
   }))
   @ApiConsumes('multipart/form-data')
@@ -290,7 +290,7 @@ export class UploadController {
             type: 'string',
             format: 'binary',
           },
-          description: 'Archivos de logos (máximo 10)',
+          description: 'Archivos de logos (máximo 30)',
         },
       },
       required: ['files'],
@@ -298,7 +298,7 @@ export class UploadController {
   })
   @ApiOperation({
     summary: 'Subir múltiples logos de comercios',
-    description: 'Sube múltiples archivos de logos de comercios de una vez (máximo 10 archivos)',
+    description: 'Sube múltiples archivos de logos de comercios de una vez (máximo 30 archivos)',
   })
   @ApiResponse({
     status: 201,
