@@ -26,6 +26,7 @@ import { promises as fs } from 'fs';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UploadService, UploadResult } from './upload.service';
 import { ApiFileUpload } from '../common/decorators/file-upload.decorator';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('🖼️ File Upload')
 @Controller('upload')
@@ -128,9 +129,10 @@ export class UploadController {
   }
 
   @Get('avatar/:filename')
+  @Public()
   @ApiOperation({
     summary: 'Obtener imagen de avatar',
-    description: 'Sirve una imagen de avatar por nombre de archivo',
+    description: 'Sirve una imagen de avatar por nombre de archivo (endpoint público)',
   })
   @ApiParam({
     name: 'filename',
@@ -139,7 +141,7 @@ export class UploadController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Imagen de avatar',
+    description: 'Imagen de avatar (endpoint público)',
     content: {
       'image/jpeg': { schema: { type: 'string', format: 'binary' } },
       'image/png': { schema: { type: 'string', format: 'binary' } },
@@ -155,9 +157,10 @@ export class UploadController {
   }
 
   @Get('campaign/:filename')
+  @Public()
   @ApiOperation({
     summary: 'Obtener cartel de campaña',
-    description: 'Sirve una imagen de cartel por nombre de archivo',
+    description: 'Sirve una imagen de cartel por nombre de archivo (endpoint público)',
   })
   @ApiParam({
     name: 'filename',
@@ -166,7 +169,7 @@ export class UploadController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Imagen de cartel',
+    description: 'Imagen de cartel (endpoint público)',
     content: {
       'image/jpeg': { schema: { type: 'string', format: 'binary' } },
       'image/png': { schema: { type: 'string', format: 'binary' } },
@@ -182,9 +185,10 @@ export class UploadController {
   }
 
   @Get('associate/:filename')
+  @Public()
   @ApiOperation({
     summary: 'Obtener logo de comercio',
-    description: 'Sirve una imagen de logo por nombre de archivo',
+    description: 'Sirve una imagen de logo por nombre de archivo (endpoint público)',
   })
   @ApiParam({
     name: 'filename',
@@ -193,7 +197,7 @@ export class UploadController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Imagen de logo',
+    description: 'Imagen de logo (endpoint público)',
     content: {
       'image/jpeg': { schema: { type: 'string', format: 'binary' } },
       'image/png': { schema: { type: 'string', format: 'binary' } },
