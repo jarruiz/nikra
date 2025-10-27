@@ -75,11 +75,11 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://ccaceuta.com,https://www.ccaceuta.com,https://nikra-front.vercel.app,https://nikra-backend.onrender.com,https://sorteos.centrocomercialabiertodeceuta.es,http://localhost:3000,http://localhost:4200
     
-    # Disco persistente para archivos subidos
-    disk:
-      name: uploads
-      mountPath: /app/uploads
-      sizeGB: 10
+    # Disco persistente para archivos subidos (configurado manualmente en el dashboard de Render)
+    # En el dashboard de Render, ve a Settings > Disks y configura:
+    # - Name: uploads
+    # - Mount Path: /app/uploads
+    # - Size: 10 GB
 
 # ==============================================
 # 🗄️ BASE DE DATOS POSTGRESQL
