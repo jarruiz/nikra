@@ -9,12 +9,14 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +25,7 @@ export class AuthService {
     private userRepository: Repository<User>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -141,6 +144,120 @@ export class AuthService {
       accessToken,
       refreshToken,
     };
+  }
+
+  /**
+   * Solicita recuperación de contraseña
+   * Genera un token seguro y envía email al usuario
+   */
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    // Buscar usuario por email (respuesta genérica para evitar enumeration)
+    const user = await this.userRepository.findOne({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    // Si el usuario no existe, retornar mensaje genérico por seguridad
+    if (!user) {
+      // Retornar mismo mensaje para evitar email enumeration
+      return {
+        message: 'Si el email existe en nuestro sistema, recibirás un correo con instrucciones para restablecer tu contraseña.',
+      };
+    }
+
+    // Verificar si el usuario está activo
+    if (!user.isActive) {
+      return {
+        message: 'Si el email existe en nuestro sistema, recibirás un correo con instrucciones para restablecer tu contraseña.',
+      };
+    }
+
+    // Generar token de recuperación
+    const resetToken = this.generateResetToken();
+    const emailConfig = this.configService.get('email');
+    const expiresIn = emailConfig.resetToken.expiresIn; // en milisegundos
+
+    // Guardar token y fecha de expiración
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = new Date(Date.now() + expiresIn);
+    await this.userRepository.save(user);
+
+    // Enviar email de recuperación
+    try {
+      await this.emailService.sendPasswordResetEmail(
+        user.email,
+        resetToken,
+        user.fullName,
+      );
+    } catch (error) {
+      // Si falla el envío de email, limpiar el token
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      await this.userRepository.save(user);
+      throw new BadRequestException('Error al enviar el email de recuperación');
+    }
+
+    return {
+      message: 'Si el email existe en nuestro sistema, recibirás un correo con instrucciones para restablecer tu contraseña.',
+    };
+  }
+
+  /**
+   * Valida si un token de recuperación es válido
+   */
+  async validateResetToken(token: string): Promise<{ valid: boolean; message?: string }> {
+    if (!token) {
+      return { valid: false, message: 'Token no proporcionado' };
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { resetPasswordToken: token },
+    });
+
+    if (!user) {
+      return { valid: false, message: 'Token inválido' };
+    }
+
+    if (!user.isResetTokenValid()) {
+      return { valid: false, message: 'Token expirado' };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Resetea la contraseña usando el token de recuperación
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    // Buscar usuario por token
+    const user = await this.userRepository.findOne({
+      where: { resetPasswordToken: token },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Token inválido o expirado');
+    }
+
+    // Verificar si el token es válido y no ha expirado
+    if (!user.isResetTokenValid()) {
+      throw new BadRequestException('Token inválido o expirado');
+    }
+
+    // Actualizar contraseña (se hash automáticamente por el @BeforeInsert/Update)
+    user.password = newPassword;
+    // Limpiar token de recuperación
+    user.clearResetToken();
+    await this.userRepository.save(user);
+
+    return {
+      message: 'Contraseña restablecida exitosamente',
+    };
+  }
+
+  /**
+   * Genera un token seguro para recuperación de contraseña
+   */
+  private generateResetToken(): string {
+    return crypto.randomBytes(32).toString('hex');
   }
 
   /**

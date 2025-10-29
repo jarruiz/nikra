@@ -41,6 +41,12 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
+  resetPasswordToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -55,13 +61,40 @@ export class User {
     }
   }
 
+  @BeforeUpdate()
+  async hashPasswordBeforeUpdate() {
+    // Solo hacer hash si la contraseña cambió y no está ya hasheada
+    if (this.password && !this.password.startsWith('$')) {
+      const salt = await bcrypt.genSalt(12);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+  }
+
   async validatePassword(plainPassword: string): Promise<boolean> {
     return bcrypt.compare(plainPassword, this.password);
   }
 
+  /**
+   * Verifica si el token de recuperación es válido y no ha expirado
+   */
+  isResetTokenValid(): boolean {
+    if (!this.resetPasswordToken || !this.resetPasswordExpires) {
+      return false;
+    }
+    return new Date() < new Date(this.resetPasswordExpires);
+  }
+
+  /**
+   * Limpia el token de recuperación de contraseña
+   */
+  clearResetToken(): void {
+    this.resetPasswordToken = null;
+    this.resetPasswordExpires = null;
+  }
+
   // Método para obtener datos seguros del usuario (sin password)
   toJSON() {
-    const { password, ...userWithoutPassword } = this;
+    const { password, resetPasswordToken, ...userWithoutPassword } = this;
     return userWithoutPassword;
   }
 }

@@ -74,6 +74,25 @@ services:
       # CORS - Orígenes permitidos (separados por comas)
       - key: ALLOWED_ORIGINS
         value: https://ccaceuta.com,https://www.ccaceuta.com,https://nikra-front.vercel.app,https://nikra-backend.onrender.com,https://sorteos.centrocomercialabiertodeceuta.es,http://localhost:3000,http://localhost:4200
+      
+      # Gmail OAuth - Configuración para envío de emails
+      - key: GMAIL_CLIENT_ID
+        value: ""  # Configurar en Render Dashboard
+      
+      - key: GMAIL_CLIENT_SECRET
+        value: ""  # Configurar en Render Dashboard
+      
+      - key: GMAIL_REFRESH_TOKEN
+        value: ""  # TODO: Configurar refresh token obtenido mediante OAuth2 flow
+      
+      - key: GMAIL_USER_EMAIL
+        value: soporte@ccaceuta.com
+      
+      - key: FRONTEND_RESET_URL
+        value: https://sorteos.centrocomercialabiertodeceuta.es/reset-password
+      
+      - key: RESET_TOKEN_EXPIRES_IN
+        value: 3600000  # 1 hora en milisegundos
     
     # Disco persistente para archivos subidos (configurado manualmente en el dashboard de Render)
     # En el dashboard de Render, ve a Settings > Disks y configura:

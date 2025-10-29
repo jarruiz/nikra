@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Body,
+  Param,
   UseGuards,
   Request,
   HttpCode,
@@ -20,8 +21,11 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto, UserProfileDto } from './dto/auth-response.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -122,5 +126,84 @@ export class AuthController {
     // En una implementación completa, aquí se invalidarían los tokens
     // Por ahora, simplemente retornamos un mensaje de éxito
     return { message: 'Sesión cerrada exitosamente' };
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Solicitar recuperación de contraseña',
+    description: 'Envía un email con un link para restablecer la contraseña',
+  })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Si el email existe, se enviará un correo con instrucciones',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Si el email existe en nuestro sistema, recibirás un correo con instrucciones para restablecer tu contraseña.',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email inválido',
+  })
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+    return this.authService.requestPasswordReset(forgotPasswordDto.email);
+  }
+
+  @Get('validate-reset-token/:token')
+  @Public()
+  @ApiOperation({
+    summary: 'Validar token de recuperación',
+    description: 'Verifica si un token de recuperación es válido y no ha expirado',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Token válido o inválido',
+      schema: {
+        type: 'object',
+        properties: {
+          valid: { type: 'boolean' },
+          message: { type: 'string' },
+        },
+      },
+  })
+  async validateResetToken(@Param('token') token: string): Promise<{ valid: boolean; message?: string }> {
+    return this.authService.validateResetToken(token);
+  }
+
+  @Post('reset-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Restablecer contraseña',
+    description: 'Restablece la contraseña usando el token de recuperación',
+  })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Contraseña restablecida exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Contraseña restablecida exitosamente',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token inválido, expirado o contraseña inválida',
+  })
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+    return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.password);
   }
 }

@@ -8,6 +8,7 @@ import { join } from 'path';
 // Configuración
 import { DatabaseConfig } from './config/database.config';
 import { JwtConfig } from './config/jwt.config';
+import emailConfig from './config/email.config';
 
 // Módulos
 import { AuthModule } from './auth/auth.module';
@@ -29,7 +30,7 @@ import { Associate } from './associates/entities/associate.entity';
     // Configuración global
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [DatabaseConfig, JwtConfig],
+      load: [DatabaseConfig, JwtConfig, emailConfig],
       envFilePath: ['.env.local', '.env'],
     }),
 
