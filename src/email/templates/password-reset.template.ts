@@ -1,4 +1,4 @@
-export function getPasswordResetEmailTemplate(resetUrl: string, userName?: string): string {
+export function getPasswordResetEmailTemplate(resetCode: string, userName?: string): string {
   const name = userName || 'Usuario';
   
   return `
@@ -27,33 +27,28 @@ export function getPasswordResetEmailTemplate(resetUrl: string, userName?: strin
                             <h2 style="margin: 0 0 20px; color: #333333; font-size: 20px;">Hola ${name},</h2>
                             
                             <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                                Has solicitado restablecer tu contraseña. Haz clic en el botón siguiente para crear una nueva contraseña:
+                                Has solicitado restablecer tu contraseña. Utiliza el siguiente código de verificación:
                             </p>
                             
-                            <!-- Reset Button -->
+                            <!-- Reset Code -->
                             <table role="presentation" style="width: 100%; margin: 30px 0;">
                                 <tr>
                                     <td style="text-align: center;">
-                                        <a href="${resetUrl}" 
-                                           style="display: inline-block; padding: 14px 32px; background-color: #1a5490; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
-                                            Restablecer Contraseña
-                                        </a>
+                                        <div style="display: inline-block; padding: 20px 40px; background-color: #f8f9fa; border: 3px solid #1a5490; border-radius: 8px; font-size: 36px; font-weight: bold; color: #1a5490; letter-spacing: 8px;">
+                                            ${resetCode}
+                                        </div>
                                     </td>
                                 </tr>
                             </table>
                             
-                            <!-- Alternative Link -->
-                            <p style="margin: 20px 0; color: #666666; font-size: 14px; line-height: 1.6;">
-                                Si el botón no funciona, copia y pega este enlace en tu navegador:
-                            </p>
-                            <p style="margin: 0 0 20px; word-break: break-all; color: #1a5490; font-size: 14px;">
-                                ${resetUrl}
+                            <p style="margin: 20px 0; color: #666666; font-size: 14px; line-height: 1.6; text-align: center;">
+                                Introduce este código en la página de restablecimiento de contraseña para continuar.
                             </p>
                             
                             <!-- Security Warning -->
                             <div style="margin: 30px 0; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
                                 <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.6;">
-                                    <strong>⚠️ Importante:</strong> Este enlace expirará en 1 hora por razones de seguridad. 
+                                    <strong>⚠️ Importante:</strong> Este código expirará en 1 hora por razones de seguridad. 
                                     Si no solicitaste este cambio, puedes ignorar este correo y tu contraseña permanecerá sin cambios.
                                 </p>
                             </div>
