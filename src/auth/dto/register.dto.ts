@@ -25,7 +25,7 @@ export class RegisterDto {
   fullName: string;
 
   @ApiProperty({
-    description: 'DNI del usuario',
+    description: 'DNI o NIE del usuario',
     example: '12345678A',
     minLength: 9,
     maxLength: 20,
@@ -34,8 +34,8 @@ export class RegisterDto {
   @IsNotEmpty()
   @MinLength(9)
   @MaxLength(20)
-  @Matches(/^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/, {
-    message: 'DNI debe tener formato válido español (8 dígitos + letra)',
+  @Matches(/^([0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]|[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE])$/, {
+    message: 'Debe tener formato válido de DNI (8 dígitos + letra) o NIE (X/Y/Z + 7 dígitos + letra)',
   })
   @Transform(({ value }) => value?.trim().toUpperCase())
   dni: string;
@@ -80,15 +80,15 @@ export class RegisterDto {
 
   @ApiProperty({
     description: 'Contraseña del usuario',
-    example: 'MiPasswordSeguro123!',
+    example: 'MiPasswordSeguro123',
     minLength: 8,
     maxLength: 50,
   })
   @IsString()
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   @MaxLength(50, { message: 'La contraseña no puede exceder 50 caracteres' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
-    message: 'La contraseña debe contener al menos: 1 minúscula, 1 mayúscula, 1 número y 1 símbolo especial',
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]/, {
+    message: 'La contraseña debe contener al menos: 1 minúscula, 1 mayúscula y 1 número',
   })
   password: string;
 }

@@ -9,7 +9,6 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import * as crypto from 'crypto';
 
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -40,13 +39,13 @@ export class AuthService {
       throw new ConflictException('El email ya está registrado');
     }
 
-    // Verificar si el usuario ya existe por DNI
+    // Verificar si el usuario ya existe por DNI o NIE
     const existingUserByDni = await this.userRepository.findOne({
       where: { dni },
     });
 
     if (existingUserByDni) {
-      throw new ConflictException('El DNI ya está registrado');
+      throw new ConflictException('El DNI o NIE ya está registrado');
     }
 
     // Crear nuevo usuario
@@ -148,7 +147,7 @@ export class AuthService {
 
   /**
    * Solicita recuperación de contraseña
-   * Genera un token seguro y envía email al usuario
+   * Genera un código numérico de 4 dígitos y envía email al usuario
    */
   async requestPasswordReset(email: string): Promise<{ message: string }> {
     // Buscar usuario por email (respuesta genérica para evitar enumeration)
@@ -171,13 +170,13 @@ export class AuthService {
       };
     }
 
-    // Generar token de recuperación
-    const resetToken = this.generateResetToken();
+    // Generar código de recuperación de 4 dígitos
+    const resetCode = this.generateResetCode();
     const emailConfig = this.configService.get('email');
     const expiresIn = emailConfig.resetToken.expiresIn; // en milisegundos
 
-    // Guardar token y fecha de expiración
-    user.resetPasswordToken = resetToken;
+    // Guardar código y fecha de expiración
+    user.resetPasswordToken = resetCode;
     user.resetPasswordExpires = new Date(Date.now() + expiresIn);
     await this.userRepository.save(user);
 
@@ -185,11 +184,11 @@ export class AuthService {
     try {
       await this.emailService.sendPasswordResetEmail(
         user.email,
-        resetToken,
+        resetCode,
         user.fullName,
       );
     } catch (error) {
-      // Si falla el envío de email, limpiar el token
+      // Si falla el envío de email, limpiar el código
       user.resetPasswordToken = null;
       user.resetPasswordExpires = null;
       await this.userRepository.save(user);
@@ -202,49 +201,59 @@ export class AuthService {
   }
 
   /**
-   * Valida si un token de recuperación es válido
+   * Valida si un código de recuperación es válido
    */
-  async validateResetToken(token: string): Promise<{ valid: boolean; message?: string }> {
-    if (!token) {
-      return { valid: false, message: 'Token no proporcionado' };
+  async validateResetCode(code: string): Promise<{ valid: boolean; message?: string }> {
+    if (!code) {
+      return { valid: false, message: 'Código no proporcionado' };
+    }
+
+    // Validar que el código tenga formato de 4 dígitos
+    if (!/^\d{4}$/.test(code)) {
+      return { valid: false, message: 'Código inválido. Debe ser un número de 4 dígitos' };
     }
 
     const user = await this.userRepository.findOne({
-      where: { resetPasswordToken: token },
+      where: { resetPasswordToken: code },
     });
 
     if (!user) {
-      return { valid: false, message: 'Token inválido' };
+      return { valid: false, message: 'Código inválido' };
     }
 
     if (!user.isResetTokenValid()) {
-      return { valid: false, message: 'Token expirado' };
+      return { valid: false, message: 'Código expirado' };
     }
 
     return { valid: true };
   }
 
   /**
-   * Resetea la contraseña usando el token de recuperación
+   * Resetea la contraseña usando el código de recuperación
    */
-  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    // Buscar usuario por token
+  async resetPassword(code: string, newPassword: string): Promise<{ message: string }> {
+    // Validar que el código tenga formato de 4 dígitos
+    if (!code || !/^\d{4}$/.test(code)) {
+      throw new BadRequestException('Código inválido. Debe ser un número de 4 dígitos');
+    }
+
+    // Buscar usuario por código
     const user = await this.userRepository.findOne({
-      where: { resetPasswordToken: token },
+      where: { resetPasswordToken: code },
     });
 
     if (!user) {
-      throw new BadRequestException('Token inválido o expirado');
+      throw new BadRequestException('Código inválido o expirado');
     }
 
-    // Verificar si el token es válido y no ha expirado
+    // Verificar si el código es válido y no ha expirado
     if (!user.isResetTokenValid()) {
-      throw new BadRequestException('Token inválido o expirado');
+      throw new BadRequestException('Código inválido o expirado');
     }
 
     // Actualizar contraseña (se hash automáticamente por el @BeforeInsert/Update)
     user.password = newPassword;
-    // Limpiar token de recuperación
+    // Limpiar código de recuperación
     user.clearResetToken();
     await this.userRepository.save(user);
 
@@ -254,10 +263,12 @@ export class AuthService {
   }
 
   /**
-   * Genera un token seguro para recuperación de contraseña
+   * Genera un código numérico de 4 dígitos para recuperación de contraseña
    */
-  private generateResetToken(): string {
-    return crypto.randomBytes(32).toString('hex');
+  private generateResetCode(): string {
+    // Generar número aleatorio entre 0 y 9999, luego formatear con ceros a la izquierda
+    const code = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return code;
   }
 
   /**

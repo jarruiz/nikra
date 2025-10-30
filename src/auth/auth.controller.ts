@@ -46,7 +46,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Email o DNI ya registrado',
+    description: 'Email o DNI/NIE ya registrado',
   })
   @ApiResponse({
     status: 400,
@@ -133,12 +133,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Solicitar recuperación de contraseña',
-    description: 'Envía un email con un link para restablecer la contraseña',
+    description: 'Envía un email con un código de 4 dígitos para restablecer la contraseña',
   })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({
     status: 200,
-    description: 'Si el email existe, se enviará un correo con instrucciones',
+    description: 'Si el email existe, se enviará un correo con un código de verificación',
     schema: {
       type: 'object',
       properties: {
@@ -157,15 +157,15 @@ export class AuthController {
     return this.authService.requestPasswordReset(forgotPasswordDto.email);
   }
 
-  @Get('validate-reset-token/:token')
+  @Get('validate-reset-code/:code')
   @Public()
   @ApiOperation({
-    summary: 'Validar token de recuperación',
-    description: 'Verifica si un token de recuperación es válido y no ha expirado',
+    summary: 'Validar código de recuperación',
+    description: 'Verifica si un código de recuperación de 4 dígitos es válido y no ha expirado',
   })
   @ApiResponse({
     status: 200,
-    description: 'Token válido o inválido',
+    description: 'Código válido o inválido',
       schema: {
         type: 'object',
         properties: {
@@ -174,8 +174,8 @@ export class AuthController {
         },
       },
   })
-  async validateResetToken(@Param('token') token: string): Promise<{ valid: boolean; message?: string }> {
-    return this.authService.validateResetToken(token);
+  async validateResetCode(@Param('code') code: string): Promise<{ valid: boolean; message?: string }> {
+    return this.authService.validateResetCode(code);
   }
 
   @Post('reset-password')
@@ -183,7 +183,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Restablecer contraseña',
-    description: 'Restablece la contraseña usando el token de recuperación',
+    description: 'Restablece la contraseña usando el código de recuperación de 4 dígitos',
   })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({
@@ -201,9 +201,9 @@ export class AuthController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Token inválido, expirado o contraseña inválida',
+    description: 'Código inválido, expirado o contraseña inválida',
   })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
-    return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.password);
+    return this.authService.resetPassword(resetPasswordDto.code, resetPasswordDto.password);
   }
 }

@@ -87,15 +87,14 @@ export class EmailService {
   }
 
   /**
-   * Envía email de recuperación de contraseña
+   * Envía email de recuperación de contraseña con código de 4 dígitos
    */
   async sendPasswordResetEmail(
     to: string,
-    resetToken: string,
+    resetCode: string,
     userName?: string,
   ): Promise<void> {
     const emailConfig = this.configService.get('email');
-    const resetUrl = `${emailConfig.frontend.resetUrl}?token=${resetToken}`;
 
     try {
       // Configurar transporter si no está inicializado
@@ -104,7 +103,7 @@ export class EmailService {
       }
 
       // Obtener plantilla HTML
-      const htmlContent = getPasswordResetEmailTemplate(resetUrl, userName);
+      const htmlContent = getPasswordResetEmailTemplate(resetCode, userName);
 
       // Configurar opciones del email
       const mailOptions = {
@@ -115,7 +114,7 @@ export class EmailService {
         to: to,
         subject: 'Recuperación de Contraseña - CCA Ceuta',
         html: htmlContent,
-        text: `Hola ${userName || 'Usuario'},\n\nHas solicitado restablecer tu contraseña.\n\nHaz clic en el siguiente enlace para crear una nueva contraseña:\n${resetUrl}\n\nEste enlace expirará en 1 hora.\n\nSi no solicitaste este cambio, puedes ignorar este correo.\n\n© ${new Date().getFullYear()} Centro Comercial Abierto de Ceuta.`,
+        text: `Hola ${userName || 'Usuario'},\n\nHas solicitado restablecer tu contraseña.\n\nTu código de verificación es: ${resetCode}\n\nEste código expirará en 1 hora.\n\nSi no solicitaste este cambio, puedes ignorar este correo.\n\n© ${new Date().getFullYear()} Centro Comercial Abierto de Ceuta.`,
       };
 
       // Enviar email
