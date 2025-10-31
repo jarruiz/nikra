@@ -202,15 +202,16 @@ export class AuthService {
 
   /**
    * Valida si un código de recuperación es válido
+   * Lanza excepciones HTTP apropiadas si el código es inválido
    */
   async validateResetCode(code: string): Promise<{ valid: boolean; message?: string }> {
     if (!code) {
-      return { valid: false, message: 'Código no proporcionado' };
+      throw new BadRequestException('Código no proporcionado');
     }
 
     // Validar que el código tenga formato de 4 dígitos
     if (!/^\d{4}$/.test(code)) {
-      return { valid: false, message: 'Código inválido. Debe ser un número de 4 dígitos' };
+      throw new BadRequestException('Código inválido. Debe ser un número de 4 dígitos');
     }
 
     const user = await this.userRepository.findOne({
@@ -218,11 +219,11 @@ export class AuthService {
     });
 
     if (!user) {
-      return { valid: false, message: 'Código inválido' };
+      throw new NotFoundException('Código inválido o no encontrado');
     }
 
     if (!user.isResetTokenValid()) {
-      return { valid: false, message: 'Código expirado' };
+      throw new BadRequestException('Código expirado');
     }
 
     return { valid: true };

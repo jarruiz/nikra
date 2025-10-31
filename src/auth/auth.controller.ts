@@ -165,14 +165,22 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Código válido o inválido',
-      schema: {
-        type: 'object',
-        properties: {
-          valid: { type: 'boolean' },
-          message: { type: 'string' },
-        },
+    description: 'Código válido',
+    schema: {
+      type: 'object',
+      properties: {
+        valid: { type: 'boolean', example: true },
+        message: { type: 'string' },
       },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Código inválido (formato incorrecto o expirado)',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Código no encontrado',
   })
   async validateResetCode(@Param('code') code: string): Promise<{ valid: boolean; message?: string }> {
     return this.authService.validateResetCode(code);
