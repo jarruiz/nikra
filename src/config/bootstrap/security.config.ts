@@ -56,6 +56,8 @@ export function setupSecurity(app: INestApplication): void {
         'https://www.ccaceuta.com',
         'https://nikra-front.vercel.app',
         'https://nikra-backend.onrender.com', // Permitir Swagger UI
+        'https://190.202.131.106:3000',
+        'http://190.202.131.106:3000',
       ];
 
   app.enableCors({
