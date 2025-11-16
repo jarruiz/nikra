@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindManyOptions } from 'typeorm';
-import { utcToZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 
 import { Campaign } from './entities/campaign.entity';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -251,7 +251,7 @@ export class CampaignsService {
     const nowUtc = new Date();
     
     // Convertir la fecha actual a zona horaria de España
-    const nowSpain = utcToZonedTime(nowUtc, timeZone);
+    const nowSpain = toZonedTime(nowUtc, timeZone);
     
     // Buscar todas las campañas
     const campaigns = await this.campaignRepository.find();
@@ -262,8 +262,8 @@ export class CampaignsService {
 
     for (const campaign of campaigns) {
       // Convertir las fechas de la campaña a zona horaria de España para comparación
-      const fechaInicioSpain = utcToZonedTime(campaign.fechaInicio, timeZone);
-      const fechaFinSpain = utcToZonedTime(campaign.fechaFin, timeZone);
+      const fechaInicioSpain = toZonedTime(campaign.fechaInicio, timeZone);
+      const fechaFinSpain = toZonedTime(campaign.fechaFin, timeZone);
       
       // Determinar si la campaña debería estar activa
       // Activa si: fechaInicio ya pasó Y fechaFin aún no ha llegado

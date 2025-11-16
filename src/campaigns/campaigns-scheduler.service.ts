@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { utcToZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 import { CampaignsService } from './campaigns.service';
 
 @Injectable()
@@ -21,7 +21,7 @@ export class CampaignsSchedulerService {
 
       // Obtener la fecha/hora actual en zona horaria de España
       const nowUtc = new Date();
-      const nowSpain = utcToZonedTime(nowUtc, this.timeZone);
+      const nowSpain = toZonedTime(nowUtc, this.timeZone);
       
       this.logger.log(`📅 Fecha/hora actual en ${this.timeZone}: ${nowSpain.toISOString()}`);
 
