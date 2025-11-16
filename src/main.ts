@@ -16,6 +16,9 @@ async function bootstrap() {
   // Crear aplicación NestJS con soporte para Express estático
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Configurar trust proxy para Render (importante para rate limiting y IPs reales)
+  app.set('trust proxy', true);
+
   // Configurar prefijo global para API
   app.setGlobalPrefix('api');
 
