@@ -46,23 +46,23 @@ export class CreateCampaignDto {
   @IsBoolean({ message: 'isActive debe ser un valor booleano' })
   isActive?: boolean = true;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Fecha de inicio de la campaña',
     example: '2025-01-15T00:00:00.000Z',
     type: 'string',
     format: 'date-time',
   })
-  @IsOptional()
+  @IsNotEmpty({ message: 'La fecha de inicio es requerida' })
   @IsDateString({}, { message: 'fechaInicio debe ser una fecha válida en formato ISO' })
-  fechaInicio?: string;
+  fechaInicio: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Fecha de finalización de la campaña',
     example: '2025-02-15T23:59:59.000Z',
     type: 'string',
     format: 'date-time',
   })
-  @IsOptional()
+  @IsNotEmpty({ message: 'La fecha de fin es requerida' })
   @IsDateString({}, { message: 'fechaFin debe ser una fecha válida en formato ISO' })
-  fechaFin?: string;
+  fechaFin: string;
 }

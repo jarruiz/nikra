@@ -17,10 +17,10 @@ export class Campaign {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: false })
   fechaInicio: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamp', nullable: false })
   fechaFin: Date;
 
   @CreateDateColumn()

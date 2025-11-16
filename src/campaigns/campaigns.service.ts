@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, FindManyOptions } from 'typeorm';
+import { utcToZonedTime } from 'date-fns-tz';
 
 import { Campaign } from './entities/campaign.entity';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -29,11 +30,19 @@ export class CampaignsService {
       throw new ConflictException('Ya existe una campaña con este nombre');
     }
 
-    // Convertir fechas de string a Date si están presentes
+    // Convertir fechas de string a Date (ahora son obligatorias)
+    const fechaInicio = new Date(createCampaignDto.fechaInicio);
+    const fechaFin = new Date(createCampaignDto.fechaFin);
+
+    // Validar que fechaFin sea posterior a fechaInicio
+    if (fechaFin <= fechaInicio) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio');
+    }
+
     const campaignData = {
       ...createCampaignDto,
-      fechaInicio: createCampaignDto.fechaInicio ? new Date(createCampaignDto.fechaInicio) : null,
-      fechaFin: createCampaignDto.fechaFin ? new Date(createCampaignDto.fechaFin) : null,
+      fechaInicio,
+      fechaFin,
     };
 
     const campaign = this.campaignRepository.create(campaignData);
@@ -115,12 +124,34 @@ export class CampaignsService {
     }
 
     // Convertir fechas de string a Date si están presentes
+    let fechaInicio = campaign.fechaInicio;
+    let fechaFin = campaign.fechaFin;
+
+    if (updateCampaignDto.fechaInicio) {
+      fechaInicio = new Date(updateCampaignDto.fechaInicio);
+    }
+    if (updateCampaignDto.fechaFin) {
+      fechaFin = new Date(updateCampaignDto.fechaFin);
+    }
+
+    // Validar que fechaFin sea posterior a fechaInicio
+    if (fechaFin <= fechaInicio) {
+      throw new BadRequestException('La fecha de fin debe ser posterior a la fecha de inicio');
+    }
+
     const updateData = {
       ...updateCampaignDto,
-      fechaInicio: updateCampaignDto.fechaInicio ? new Date(updateCampaignDto.fechaInicio) : updateCampaignDto.fechaInicio,
-      fechaFin: updateCampaignDto.fechaFin ? new Date(updateCampaignDto.fechaFin) : updateCampaignDto.fechaFin,
+      fechaInicio: updateCampaignDto.fechaInicio ? fechaInicio : undefined,
+      fechaFin: updateCampaignDto.fechaFin ? fechaFin : undefined,
       updatedAt: new Date(),
     };
+
+    // Eliminar propiedades undefined
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
     // Actualizar campaña
     await this.campaignRepository.update(id, updateData);
@@ -208,6 +239,53 @@ export class CampaignsService {
       throw new NotFoundException('Campaña no encontrada');
     }
     return campaign;
+  }
+
+  /**
+   * Actualizar el estado de las campañas basado en las fechas
+   * Este método es llamado por el scheduler para actualizar automáticamente isActive
+   * Las fechas se comparan en zona horaria de España (Europe/Madrid)
+   */
+  async updateCampaignStatusByDates(): Promise<{ updated: number; activated: number; deactivated: number }> {
+    const timeZone = 'Europe/Madrid';
+    const nowUtc = new Date();
+    
+    // Convertir la fecha actual a zona horaria de España
+    const nowSpain = utcToZonedTime(nowUtc, timeZone);
+    
+    // Buscar todas las campañas
+    const campaigns = await this.campaignRepository.find();
+
+    let updated = 0;
+    let activated = 0;
+    let deactivated = 0;
+
+    for (const campaign of campaigns) {
+      // Convertir las fechas de la campaña a zona horaria de España para comparación
+      const fechaInicioSpain = utcToZonedTime(campaign.fechaInicio, timeZone);
+      const fechaFinSpain = utcToZonedTime(campaign.fechaFin, timeZone);
+      
+      // Determinar si la campaña debería estar activa
+      // Activa si: fechaInicio ya pasó Y fechaFin aún no ha llegado
+      const shouldBeActive = fechaInicioSpain <= nowSpain && fechaFinSpain > nowSpain;
+      
+      // Solo actualizar si el estado actual es diferente al esperado
+      if (campaign.isActive !== shouldBeActive) {
+        await this.campaignRepository.update(campaign.id, {
+          isActive: shouldBeActive,
+          updatedAt: new Date(),
+        });
+        
+        updated++;
+        if (shouldBeActive) {
+          activated++;
+        } else {
+          deactivated++;
+        }
+      }
+    }
+
+    return { updated, activated, deactivated };
   }
 
   /**

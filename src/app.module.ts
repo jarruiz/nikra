@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 
 // Configuración
@@ -68,6 +69,9 @@ import { Associate } from './associates/entities/associate.entity';
 
     // Passport
     PassportModule.register({ defaultStrategy: 'jwt' }),
+
+    // Schedule Module para tareas programadas
+    ScheduleModule.forRoot(),
 
     // Módulos de la aplicación
     AuthModule,
