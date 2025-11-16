@@ -43,8 +43,14 @@ export function setupSwagger(app: INestApplication): void {
     );
 
   // Configurar servidores según el entorno
-  if (process.env.NODE_ENV === 'production') {
-    // En producción, agregar el servidor de Render
+  // Prioridad: SWAGGER_SERVER_URL > valores por defecto según NODE_ENV
+  const swaggerServerUrl = process.env.SWAGGER_SERVER_URL;
+  
+  if (swaggerServerUrl) {
+    // Si hay una URL específica configurada, usarla (útil para testing)
+    configBuilder.addServer(swaggerServerUrl, 'Servidor API');
+  } else if (process.env.NODE_ENV === 'production') {
+    // En producción (sin SWAGGER_SERVER_URL), usar servidores de producción
     configBuilder.addServer('https://nikra-backend.onrender.com', 'Render (Producción)');
     configBuilder.addServer('https://api.nikra.cca.ceuta.es', 'Dominio Personalizado');
   } else {
