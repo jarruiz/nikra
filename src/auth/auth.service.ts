@@ -16,6 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { UserProfileDto } from '../users/dto/user-profile.dto';
 import { EmailService } from '../email/email.service';
+import { RolesService } from '../roles/roles.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
+    private rolesService: RolesService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
@@ -52,22 +54,36 @@ export class AuthService {
     const user = this.userRepository.create(registerDto);
     const savedUser = await this.userRepository.save(user);
 
+    // Asignar rol por defecto
+    const defaultRole = await this.rolesService.findDefaultRole();
+    if (defaultRole) {
+      savedUser.roles = [defaultRole];
+      await this.userRepository.save(savedUser);
+    }
+
+    // Cargar usuario con roles para generar tokens
+    const userWithRoles = await this.userRepository.findOne({
+      where: { id: savedUser.id },
+      relations: ['roles', 'roles.permissions'],
+    });
+
     // Generar tokens
-    const tokens = await this.generateTokens(savedUser);
+    const tokens = await this.generateTokens(userWithRoles);
 
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: this.toUserProfileDto(savedUser),
+      user: this.toUserProfileDto(userWithRoles),
     };
   }
 
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const { email, password } = loginDto;
 
-    // Buscar usuario por email
+    // Buscar usuario por email con roles y permisos
     const user = await this.userRepository.findOne({
       where: { email },
+      relations: ['roles', 'roles.permissions'],
     });
 
     if (!user) {
@@ -110,7 +126,10 @@ export class AuthService {
   }
 
   async findUserById(id: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id } });
+    const user = await this.userRepository.findOne({ 
+      where: { id },
+      relations: ['roles', 'roles.permissions'],
+    });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
@@ -118,10 +137,26 @@ export class AuthService {
   }
 
   private async generateTokens(user: User) {
+    // Consolidar permisos de todos los roles del usuario
+    const permissions: string[] = [];
+    if (user.roles) {
+      for (const role of user.roles) {
+        if (role.permissions) {
+          for (const perm of role.permissions) {
+            if (!permissions.includes(perm.name)) {
+              permissions.push(perm.name);
+            }
+          }
+        }
+      }
+    }
+
     const payload = { 
       sub: user.id, 
       email: user.email, 
       fullName: user.fullName,
+      roles: user.roles?.map(role => role.name) || [],
+      permissions: permissions,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -131,6 +166,8 @@ export class AuthService {
       sub: user.id, 
       email: user.email, 
       fullName: user.fullName,
+      roles: user.roles?.map(role => role.name) || [],
+      permissions: permissions,
       type: 'refresh' 
     };
     

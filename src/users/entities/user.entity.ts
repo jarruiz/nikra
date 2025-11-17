@@ -6,8 +6,11 @@ import {
   UpdateDateColumn,
   BeforeInsert,
   BeforeUpdate,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { Role } from '../../roles/entities/role.entity';
 
 @Entity('users')
 export class User {
@@ -46,6 +49,16 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   resetPasswordExpires: Date;
+
+  @ManyToMany(() => Role, (role) => role.users, {
+    cascade: false,
+  })
+  @JoinTable({
+    name: 'user_roles',
+    joinColumn: { name: 'userId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' },
+  })
+  roles: Role[];
 
   @CreateDateColumn()
   createdAt: Date;

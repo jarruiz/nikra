@@ -38,11 +38,27 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         throw new UnauthorizedException('Usuario inactivo');
       }
 
+      // Consolidar permisos de todos los roles del usuario
+      const permissions: string[] = [];
+      if (user.roles) {
+        for (const role of user.roles) {
+          if (role.permissions) {
+            for (const perm of role.permissions) {
+              if (!permissions.includes(perm.name)) {
+                permissions.push(perm.name);
+              }
+            }
+          }
+        }
+      }
+
       return {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         emailVerified: user.emailVerified,
+        roles: user.roles?.map(role => role.name) || [],
+        permissions: permissions,
       };
     } catch (error) {
       console.error('JWT Validation Error:', error.message);

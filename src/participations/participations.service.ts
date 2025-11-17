@@ -104,15 +104,15 @@ export class ParticipationsService {
   /**
    * Buscar participaciones con filtros y paginación
    */
-  async findAll(searchDto: ParticipationSearchDto, requestingUserId?: string): Promise<ParticipationsResponseDto> {
+  async findAll(searchDto: ParticipationSearchDto, requestingUserId?: string, canReadAll: boolean = false): Promise<ParticipationsResponseDto> {
     const { page = 1, limit = 20, ...filters } = searchDto;
     const skip = (page - 1) * limit;
 
     // Construir condiciones de búsqueda
     const whereConditions: any = {};
 
-    // Si no es admin, solo puede ver sus propias participaciones
-    if (requestingUserId && !filters.userId) {
+    // Si no tiene permiso para leer todas, solo puede ver sus propias participaciones
+    if (!canReadAll && requestingUserId && !filters.userId) {
       whereConditions.userId = requestingUserId;
     } else if (filters.userId) {
       whereConditions.userId = filters.userId;
@@ -175,7 +175,7 @@ export class ParticipationsService {
   /**
    * Obtener participación por ID
    */
-  async findOne(id: string, requestingUserId?: string): Promise<ParticipationResponseDto> {
+  async findOne(id: string, requestingUserId?: string, canReadAll: boolean = false): Promise<ParticipationResponseDto> {
     const participation = await this.participationRepository.findOne({
       where: { id },
       relations: ['user', 'associate'],
@@ -185,8 +185,8 @@ export class ParticipationsService {
       throw new NotFoundException('Participación no encontrada');
     }
 
-    // Verificar que el usuario solo puede ver sus propias participaciones (a menos que sea admin)
-    if (requestingUserId && participation.userId !== requestingUserId) {
+    // Verificar que el usuario solo puede ver sus propias participaciones (a menos que tenga permiso para leer todas)
+    if (!canReadAll && requestingUserId && participation.userId !== requestingUserId) {
       throw new ForbiddenException('No tienes permisos para ver esta participación');
     }
 
@@ -196,9 +196,9 @@ export class ParticipationsService {
   /**
    * Obtener participaciones de un usuario específico
    */
-  async findByUser(userId: string, requestingUserId?: string): Promise<ParticipationResponseDto[]> {
-    // Verificar que solo puede ver sus propias participaciones (a menos que sea admin)
-    if (requestingUserId && userId !== requestingUserId) {
+  async findByUser(userId: string, requestingUserId?: string, canReadAll: boolean = false): Promise<ParticipationResponseDto[]> {
+    // Verificar que solo puede ver sus propias participaciones (a menos que tenga permiso para leer todas)
+    if (!canReadAll && requestingUserId && userId !== requestingUserId) {
       throw new ForbiddenException('No tienes permisos para ver las participaciones de este usuario');
     }
 

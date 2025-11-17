@@ -18,19 +18,22 @@ import { Response } from 'express';
 import { ExportService } from './export.service';
 import { ExportQueryDto } from './dto/export-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 
 @ApiTags('export')
 @Controller('export')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class ExportController {
   constructor(private readonly exportService: ExportService) {}
 
   @Get('participations/excel')
   @Header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  @RequirePermissions('participations.read.all', 'participations.manage')
   @ApiOperation({
     summary: 'Exportar participaciones a Excel',
-    description: 'Genera y descarga un archivo Excel (.xlsx) con todas las participaciones según los filtros aplicados',
+    description: 'Genera y descarga un archivo Excel (.xlsx) con todas las participaciones según los filtros aplicados (requiere permisos de administración)',
   })
   @ApiResponse({
     status: 200,
@@ -64,9 +67,10 @@ export class ExportController {
 
   @Get('participations/csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
+  @RequirePermissions('participations.read.all', 'participations.manage')
   @ApiOperation({
     summary: 'Exportar participaciones a CSV',
-    description: 'Genera y descarga un archivo CSV con todas las participaciones según los filtros aplicados',
+    description: 'Genera y descarga un archivo CSV con todas las participaciones según los filtros aplicados (requiere permisos de administración)',
   })
   @ApiResponse({
     status: 200,
@@ -101,9 +105,10 @@ export class ExportController {
   }
 
   @Get('participations/stats')
+  @RequirePermissions('participations.read.all', 'participations.manage')
   @ApiOperation({
     summary: 'Obtener estadísticas de exportación',
-    description: 'Obtiene estadísticas sobre las participaciones que serán exportadas según los filtros especificados',
+    description: 'Obtiene estadísticas sobre las participaciones que serán exportadas según los filtros especificados (requiere permisos de administración)',
   })
   @ApiResponse({
     status: 200,

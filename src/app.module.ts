@@ -19,12 +19,15 @@ import { ParticipationsModule } from './participations/participations.module';
 import { AssociatesModule } from './associates/associates.module';
 import { ExportModule } from './export/export.module';
 import { UploadModule } from './upload/upload.module';
+import { RolesModule } from './roles/roles.module';
 
 // Entidades
 import { User } from './users/entities/user.entity';
 import { Campaign } from './campaigns/entities/campaign.entity';
 import { Participation } from './participations/entities/participation.entity';
 import { Associate } from './associates/entities/associate.entity';
+import { Role } from './roles/entities/role.entity';
+import { Permission } from './roles/entities/permission.entity';
 
 @Module({
   imports: [
@@ -47,7 +50,7 @@ import { Associate } from './associates/entities/associate.entity';
           username: dbConfig.username,
           password: dbConfig.password,
           database: dbConfig.database,
-          entities: [User, Campaign, Participation, Associate],
+          entities: [User, Campaign, Participation, Associate, Role, Permission],
           migrations: [join(__dirname, 'database/migrations/*{.ts,.js}')],
           synchronize: false, // Usar migraciones en su lugar
           migrationsRun: process.env.NODE_ENV === 'production', // Auto-run migraciones en producción
@@ -76,6 +79,7 @@ import { Associate } from './associates/entities/associate.entity';
     // Módulos de la aplicación
     AuthModule,
     UsersModule,
+    RolesModule,
     CampaignsModule,
     ParticipationsModule,
     AssociatesModule,

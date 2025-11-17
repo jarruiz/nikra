@@ -30,18 +30,22 @@ import { UpdateAssociateDto } from './dto/update-associate.dto';
 import { AssociateResponseDto } from './dto/associate-response.dto';
 import { AssociatesResponseDto } from './dto/associates-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('associates')
 @Controller('associates')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class AssociatesController {
   constructor(private readonly associatesService: AssociatesService) {}
 
   @Post()
+  @RequirePermissions('associates.create', 'associates.manage')
   @ApiOperation({
     summary: 'Crear nuevo comercio adherido',
-    description: 'Registra un nuevo comercio adherido al sistema',
+    description: 'Registra un nuevo comercio adherido al sistema (requiere permisos de administración)',
   })
   @ApiResponse({
     status: 201,
@@ -57,9 +61,10 @@ export class AssociatesController {
   }
 
   @Get()
+  @RequirePermissions('associates.read', 'associates.manage')
   @ApiOperation({
     summary: 'Listar comercios adheridos',
-    description: 'Obtiene una lista paginada de comercios adheridos con filtros de búsqueda',
+    description: 'Obtiene una lista paginada de comercios adheridos con filtros de búsqueda (requiere permisos de administración)',
   })
   @ApiQuery({
     name: 'page',
@@ -101,9 +106,10 @@ export class AssociatesController {
   }
 
   @Get('active')
+  @Public()
   @ApiOperation({
     summary: 'Obtener comercios activos',
-    description: 'Obtiene solo los comercios que están actualmente activos (útil para desplegables)',
+    description: 'Obtiene solo los comercios que están actualmente activos (público, útil para desplegables)',
   })
   @ApiResponse({
     status: 200,
@@ -115,9 +121,10 @@ export class AssociatesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({
     summary: 'Obtener comercio por ID',
-    description: 'Obtiene los datos de un comercio específico por su ID',
+    description: 'Obtiene los datos de un comercio específico por su ID (público)',
   })
   @ApiParam({
     name: 'id',
@@ -138,9 +145,10 @@ export class AssociatesController {
   }
 
   @Patch(':id')
+  @RequirePermissions('associates.update', 'associates.manage')
   @ApiOperation({
     summary: 'Actualizar comercio',
-    description: 'Actualiza los datos de un comercio específico',
+    description: 'Actualiza los datos de un comercio específico (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'id',
@@ -169,9 +177,10 @@ export class AssociatesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('associates.delete', 'associates.manage')
   @ApiOperation({
     summary: 'Eliminar comercio',
-    description: 'Realiza un soft delete del comercio (lo marca como inactivo)',
+    description: 'Realiza un soft delete del comercio (lo marca como inactivo) (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'id',
@@ -191,9 +200,10 @@ export class AssociatesController {
   }
 
   @Patch(':id/logo')
+  @RequirePermissions('associates.update', 'associates.manage')
   @ApiOperation({
     summary: 'Actualizar logo del comercio',
-    description: 'Actualiza el nombre del archivo de logo de un comercio asociado',
+    description: 'Actualiza el nombre del archivo de logo de un comercio asociado (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'id',

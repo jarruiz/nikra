@@ -29,18 +29,22 @@ import { CampaignSearchDto } from './dto/campaign-search.dto';
 import { CampaignResponseDto } from './dto/campaign-response.dto';
 import { CampaignsResponseDto } from './dto/campaigns-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('campaigns')
 @Controller('campaigns')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 
   @Post()
+  @RequirePermissions('campaigns.create', 'campaigns.manage')
   @ApiOperation({
     summary: 'Crear nueva campaña',
-    description: 'Crea una nueva campaña promocional',
+    description: 'Crea una nueva campaña promocional (requiere permisos de administración)',
   })
   @ApiResponse({
     status: 201,
@@ -56,9 +60,10 @@ export class CampaignsController {
   }
 
   @Get()
+  @RequirePermissions('campaigns.read', 'campaigns.manage')
   @ApiOperation({
     summary: 'Listar campañas',
-    description: 'Obtiene una lista paginada de campañas con filtros de búsqueda',
+    description: 'Obtiene una lista paginada de campañas con filtros de búsqueda (requiere permisos de administración)',
   })
   @ApiResponse({
     status: 200,
@@ -70,9 +75,10 @@ export class CampaignsController {
   }
 
   @Get('active')
+  @Public()
   @ApiOperation({
     summary: 'Obtener campañas activas',
-    description: 'Obtiene solo las campañas que están actualmente activas',
+    description: 'Obtiene solo las campañas que están actualmente activas (público)',
   })
   @ApiResponse({
     status: 200,
@@ -84,9 +90,10 @@ export class CampaignsController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({
     summary: 'Obtener campaña por ID',
-    description: 'Obtiene los datos de una campaña específica por su ID',
+    description: 'Obtiene los datos de una campaña específica por su ID (público)',
   })
   @ApiParam({
     name: 'id',
@@ -107,9 +114,10 @@ export class CampaignsController {
   }
 
   @Patch(':id')
+  @RequirePermissions('campaigns.update', 'campaigns.manage')
   @ApiOperation({
     summary: 'Actualizar campaña',
-    description: 'Actualiza los datos de una campaña específica',
+    description: 'Actualiza los datos de una campaña específica (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'id',
@@ -137,9 +145,10 @@ export class CampaignsController {
   }
 
   @Patch(':id/status')
+  @RequirePermissions('campaigns.update', 'campaigns.manage')
   @ApiOperation({
     summary: 'Cambiar estado de campaña',
-    description: 'Activa o desactiva una campaña específica',
+    description: 'Activa o desactiva una campaña específica (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'id',
@@ -168,9 +177,10 @@ export class CampaignsController {
   }
 
   @Post(':id/clone')
+  @RequirePermissions('campaigns.create', 'campaigns.manage')
   @ApiOperation({
     summary: 'Clonar campaña',
-    description: 'Crea una copia de una campaña existente',
+    description: 'Crea una copia de una campaña existente (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'id',
@@ -199,9 +209,10 @@ export class CampaignsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('campaigns.delete', 'campaigns.manage')
   @ApiOperation({
     summary: 'Eliminar campaña',
-    description: 'Realiza un soft delete de la campaña (la marca como inactiva)',
+    description: 'Realiza un soft delete de la campaña (la marca como inactiva) (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'id',

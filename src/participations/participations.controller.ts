@@ -24,15 +24,18 @@ import { ParticipationResponseDto } from './dto/participation-response.dto';
 import { ParticipationSearchDto } from './dto/participation-search.dto';
 import { ParticipationsResponseDto } from './dto/participations-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 
 @ApiTags('participations')
 @Controller('participations')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class ParticipationsController {
   constructor(private readonly participationsService: ParticipationsService) {}
 
   @Post()
+  @RequirePermissions('participations.create', 'participations.manage')
   @ApiOperation({
     summary: 'Crear nueva participación',
     description: 'Registra una nueva participación manual con los datos del ticket de compra',
@@ -66,9 +69,10 @@ export class ParticipationsController {
   }
 
   @Get()
+  @RequirePermissions('participations.read.all', 'participations.manage')
   @ApiOperation({
     summary: 'Listar participaciones',
-    description: 'Obtiene una lista paginada de participaciones. Los usuarios solo pueden ver las suyas propias.',
+    description: 'Obtiene una lista paginada de todas las participaciones (requiere permisos de administración)',
   })
   @ApiResponse({
     status: 200,
@@ -79,10 +83,13 @@ export class ParticipationsController {
     @Query() searchDto: ParticipationSearchDto,
     @Request() req: any,
   ): Promise<ParticipationsResponseDto> {
-    return this.participationsService.findAll(searchDto, req.user.id);
+    const userPermissions: string[] = req.user.permissions || [];
+    const canReadAll = userPermissions.includes('participations.read.all') || userPermissions.includes('participations.manage');
+    return this.participationsService.findAll(searchDto, req.user.id, canReadAll);
   }
 
   @Get('me')
+  @RequirePermissions('participations.read.own', 'participations.read.all', 'participations.manage')
   @ApiOperation({
     summary: 'Mis participaciones',
     description: 'Obtiene todas las participaciones del usuario autenticado',
@@ -97,9 +104,10 @@ export class ParticipationsController {
   }
 
   @Get('user/:userId')
+  @RequirePermissions('participations.read.all', 'participations.manage')
   @ApiOperation({
     summary: 'Participaciones por usuario',
-    description: 'Obtiene todas las participaciones de un usuario específico',
+    description: 'Obtiene todas las participaciones de un usuario específico (requiere permisos de administración)',
   })
   @ApiParam({
     name: 'userId',
@@ -123,13 +131,16 @@ export class ParticipationsController {
     @Param('userId', ParseUUIDPipe) userId: string,
     @Request() req: any,
   ): Promise<ParticipationResponseDto[]> {
-    return this.participationsService.findByUser(userId, req.user.id);
+    const userPermissions: string[] = req.user.permissions || [];
+    const canReadAll = userPermissions.includes('participations.read.all') || userPermissions.includes('participations.manage');
+    return this.participationsService.findByUser(userId, req.user.id, canReadAll);
   }
 
   @Get(':id')
+  @RequirePermissions('participations.read.own', 'participations.read.all', 'participations.manage')
   @ApiOperation({
     summary: 'Obtener participación por ID',
-    description: 'Obtiene los datos de una participación específica por su ID',
+    description: 'Obtiene los datos de una participación específica por su ID. Los usuarios solo pueden ver las suyas propias.',
   })
   @ApiParam({
     name: 'id',
@@ -153,6 +164,8 @@ export class ParticipationsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: any,
   ): Promise<ParticipationResponseDto> {
-    return this.participationsService.findOne(id, req.user.id);
+    const userPermissions: string[] = req.user.permissions || [];
+    const canReadAll = userPermissions.includes('participations.read.all') || userPermissions.includes('participations.manage');
+    return this.participationsService.findOne(id, req.user.id, canReadAll);
   }
 }
