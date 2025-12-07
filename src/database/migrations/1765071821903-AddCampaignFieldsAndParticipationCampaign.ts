@@ -71,15 +71,14 @@ export class AddCampaignFieldsAndParticipationCampaign1765071821903 implements M
       }),
     );
 
-    // Agregar campaignId a la tabla participations
-    // NOTA: Si hay participaciones existentes, se necesita un script de migración de datos previo
-    // para asignar un campaignId a cada participación existente antes de ejecutar esta migración
+    // Agregar campaignId a la tabla participations (nullable para compatibilidad con datos existentes)
+    // Las nuevas participaciones siempre tendrán campaignId, pero las antiguas pueden no tenerlo
     await queryRunner.addColumn(
       'participations',
       new TableColumn({
         name: 'campaignId',
         type: 'uuid',
-        isNullable: false,
+        isNullable: true,
       }),
     );
 

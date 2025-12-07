@@ -14,7 +14,7 @@ export class Participation {
   @Column({ type: 'uuid' })
   associateId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   campaignId: string;
 
   @Column({ type: 'varchar', length: 100 })
@@ -40,7 +40,7 @@ export class Participation {
   @JoinColumn({ name: 'associateId' })
   associate: Associate;
 
-  @ManyToOne(() => Campaign)
+  @ManyToOne(() => Campaign, { nullable: true })
   @JoinColumn({ name: 'campaignId' })
   campaign: Campaign;
 }
