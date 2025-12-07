@@ -7,6 +7,7 @@ import { ParticipationsService } from '../../src/participations/participations.s
 import { Participation } from '../../src/participations/entities/participation.entity';
 import { User } from '../../src/users/entities/user.entity';
 import { Associate } from '../../src/associates/entities/associate.entity';
+import { Campaign } from '../../src/campaigns/entities/campaign.entity';
 import { CreateParticipationDto } from '../../src/participations/dto/create-participation.dto';
 
 describe('ParticipationsService', () => {
@@ -14,6 +15,7 @@ describe('ParticipationsService', () => {
   let participationRepository: Repository<Participation>;
   let userRepository: Repository<User>;
   let associateRepository: Repository<Associate>;
+  let campaignRepository: Repository<Campaign>;
 
   const mockParticipationRepository = {
     findOne: jest.fn(),
@@ -32,6 +34,10 @@ describe('ParticipationsService', () => {
     findOne: jest.fn(),
   };
 
+  const mockCampaignRepository = {
+    find: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,6 +54,10 @@ describe('ParticipationsService', () => {
           provide: getRepositoryToken(Associate),
           useValue: mockAssociateRepository,
         },
+        {
+          provide: getRepositoryToken(Campaign),
+          useValue: mockCampaignRepository,
+        },
       ],
     }).compile();
 
@@ -55,6 +65,7 @@ describe('ParticipationsService', () => {
     participationRepository = module.get<Repository<Participation>>(getRepositoryToken(Participation));
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
     associateRepository = module.get<Repository<Associate>>(getRepositoryToken(Associate));
+    campaignRepository = module.get<Repository<Campaign>>(getRepositoryToken(Campaign));
   });
 
   afterEach(() => {
@@ -82,23 +93,42 @@ describe('ParticipationsService', () => {
       activo: true,
     };
 
-    it('should create participation successfully', async () => {
+    it('should create participations successfully', async () => {
       // Arrange
+      const mockCampaign = {
+        id: 'campaign-id',
+        nombre: 'Campaña Test',
+        isActive: true,
+        fechaInicio: new Date('2025-01-01'),
+        fechaFin: new Date('2025-12-31'),
+        importeMinimo: 10,
+        cuantiaMaximaAcumulable: null,
+        reglaParticipacion: 'Regla test',
+        reglaRedondeo: 'Redondeo test',
+      };
+
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockAssociateRepository.findOne.mockResolvedValue(mockAssociate);
-      mockParticipationRepository.findOne.mockResolvedValue(null); // No duplicate
+      mockCampaignRepository.find.mockResolvedValue([mockCampaign]); // Campaña válida encontrada
+      mockParticipationRepository.find.mockResolvedValue([]); // No hay participaciones previas
+      mockParticipationRepository.find.mockResolvedValueOnce([]); // Para verificar duplicados
       mockParticipationRepository.count.mockResolvedValue(0); // No daily limit exceeded
       
       const savedParticipation = {
         id: 'participation-id',
         userId,
+        campaignId: mockCampaign.id,
         ...createDto,
         fechaTicket: new Date(createDto.fechaTicket),
         createdAt: new Date(),
         updatedAt: new Date(),
+        user: mockUser,
+        associate: mockAssociate,
+        campaign: mockCampaign,
       };
       mockParticipationRepository.create.mockReturnValue(savedParticipation);
-      mockParticipationRepository.save.mockResolvedValue(savedParticipation);
+      mockParticipationRepository.save.mockResolvedValue([savedParticipation]);
+      mockParticipationRepository.find.mockResolvedValueOnce([savedParticipation]); // Para la respuesta final
 
       // Act
       const result = await service.create(createDto, userId);
@@ -108,8 +138,11 @@ describe('ParticipationsService', () => {
       expect(mockAssociateRepository.findOne).toHaveBeenCalledWith({
         where: { id: createDto.associateId, activo: true },
       });
-      expect(result.numeroTicket).toBe(createDto.numeroTicket);
-      expect(result.userId).toBe(userId);
+      expect(mockCampaignRepository.find).toHaveBeenCalled();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].numeroTicket).toBe(createDto.numeroTicket);
+      expect(result[0].userId).toBe(userId);
     });
 
     it('should throw NotFoundException when user does not exist', async () => {
@@ -225,7 +258,7 @@ describe('ParticipationsService', () => {
       // Assert
       expect(mockParticipationRepository.findOne).toHaveBeenCalledWith({
         where: { id: participationId },
-        relations: ['user', 'associate'],
+        relations: ['user', 'associate', 'campaign'],
       });
       expect(result.id).toBe(participationId);
     });
