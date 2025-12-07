@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, FindManyOptions, Like, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, Between, FindManyOptions, Like, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
 
 import { Participation } from './entities/participation.entity';
 import { User } from '../users/entities/user.entity';
 import { Associate } from '../associates/entities/associate.entity';
+import { Campaign } from '../campaigns/entities/campaign.entity';
 import { CreateParticipationDto } from './dto/create-participation.dto';
 import { ParticipationResponseDto } from './dto/participation-response.dto';
 import { ParticipationSearchDto } from './dto/participation-search.dto';
@@ -19,15 +20,18 @@ export class ParticipationsService {
     private userRepository: Repository<User>,
     @InjectRepository(Associate)
     private associateRepository: Repository<Associate>,
+    @InjectRepository(Campaign)
+    private campaignRepository: Repository<Campaign>,
   ) {}
 
   /**
-   * Crear nueva participación
+   * Crear nuevas participaciones automáticamente en todas las campañas válidas
+   * Un ticket puede generar múltiples participaciones (una por cada campaña activa que cumpla criterios)
    */
   async create(
     createParticipationDto: CreateParticipationDto,
     userId: string
-  ): Promise<ParticipationResponseDto> {
+  ): Promise<ParticipationResponseDto[]> {
     // Verificar que el usuario existe
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -42,22 +46,10 @@ export class ParticipationsService {
       throw new NotFoundException('Comercio no encontrado o inactivo');
     }
 
-    // Verificar si ya existe una participación con el mismo número de ticket y comercio
-    const existingParticipation = await this.participationRepository.findOne({
-      where: {
-        numeroTicket: createParticipationDto.numeroTicket,
-        associateId: createParticipationDto.associateId,
-      },
-    });
-
-    if (existingParticipation) {
-      throw new ConflictException('Ya existe una participación con este número de ticket en el mismo comercio');
-    }
-
     // Validar fecha (no puede ser futura)
     const fechaTicket = new Date(createParticipationDto.fechaTicket);
     const today = new Date();
-    today.setHours(23, 59, 59, 999); // Final del día actual
+    today.setHours(23, 59, 59, 999);
 
     if (fechaTicket > today) {
       throw new BadRequestException('La fecha del ticket no puede ser futura');
@@ -89,16 +81,127 @@ export class ParticipationsService {
       throw new ForbiddenException('Has alcanzado el límite máximo de 5 participaciones por día');
     }
 
-    // Crear la participación
-    const participation = this.participationRepository.create({
-      ...createParticipationDto,
-      userId,
-      fechaTicket,
+    // Buscar todas las campañas activas que cumplan los criterios básicos:
+    // 1. isActive = true
+    // 2. fechaInicio <= fechaTicket <= fechaFin
+    // 3. importeMinimo <= importeTotal
+    const validCampaigns = await this.campaignRepository.find({
+      where: {
+        isActive: true,
+        fechaInicio: LessThanOrEqual(fechaTicket),
+        fechaFin: MoreThanOrEqual(fechaTicket),
+      },
     });
 
-    const savedParticipation = await this.participationRepository.save(participation);
+    // Filtrar por importe mínimo
+    let eligibleCampaigns = validCampaigns.filter(
+      campaign => createParticipationDto.importeTotal >= campaign.importeMinimo
+    );
 
-    return this.toResponseDto(savedParticipation);
+    if (eligibleCampaigns.length === 0) {
+      throw new BadRequestException(
+        `El ticket no cumple los criterios de ninguna campaña activa. ` +
+        `Importe del ticket: ${createParticipationDto.importeTotal}€. ` +
+        `Fecha del ticket: ${createParticipationDto.fechaTicket}`
+      );
+    }
+
+    // Verificar límite máximo acumulable por usuario en cada campaña
+    // Calcular el total acumulado del usuario en cada campaña
+    const campaignsWithAccumulated = await Promise.all(
+      eligibleCampaigns.map(async (campaign) => {
+        // Calcular el total acumulado del usuario en esta campaña
+        const participations = await this.participationRepository.find({
+          where: {
+            userId,
+            campaignId: campaign.id,
+          },
+        });
+
+        // Sumar los importes totales de todas las participaciones previas del usuario en esta campaña
+        const acumuladoActual = participations.reduce((sum, p) => {
+          return sum + parseFloat(p.importeTotal.toString());
+        }, 0);
+
+        // Verificar si el nuevo ticket superaría el límite
+        const nuevoAcumulado = acumuladoActual + createParticipationDto.importeTotal;
+
+        // Verificar si hay límite máximo y si se superaría
+        const tieneLimite = campaign.cuantiaMaximaAcumulable !== null && campaign.cuantiaMaximaAcumulable !== undefined;
+        const superaLimite = tieneLimite && nuevoAcumulado > campaign.cuantiaMaximaAcumulable;
+
+        return {
+          campaign,
+          acumuladoActual,
+          nuevoAcumulado,
+          superaLimite,
+          puedeParticipar: !superaLimite,
+        };
+      })
+    );
+
+    // Filtrar solo las campañas donde el usuario puede participar
+    const finalEligibleCampaigns = campaignsWithAccumulated
+      .filter(item => item.puedeParticipar)
+      .map(item => item.campaign);
+
+    if (finalEligibleCampaigns.length === 0) {
+      // Informar qué campañas fueron excluidas y por qué
+      const excludedCampaigns = campaignsWithAccumulated
+        .filter(item => !item.puedeParticipar)
+        .map(item => ({
+          nombre: item.campaign.nombre,
+          razon: item.campaign.cuantiaMaximaAcumulable 
+            ? `Límite máximo alcanzado (${item.acumuladoActual}€ / ${item.campaign.cuantiaMaximaAcumulable}€)`
+            : 'No aplica',
+        }));
+
+      throw new BadRequestException(
+        `No se pueden crear participaciones. El usuario ha alcanzado el límite máximo acumulable en todas las campañas elegibles. ` +
+        `Campañas excluidas: ${excludedCampaigns.map(c => `${c.nombre} (${c.razon})`).join(', ')}`
+      );
+    }
+
+    // Verificar que no exista ya una participación con el mismo número de ticket
+    // para este usuario y comercio en alguna de las campañas elegibles finales
+    const existingParticipations = await this.participationRepository.find({
+      where: {
+        numeroTicket: createParticipationDto.numeroTicket,
+        associateId: createParticipationDto.associateId,
+        userId: userId,
+        campaignId: In(finalEligibleCampaigns.map(c => c.id)),
+      },
+    });
+
+    if (existingParticipations.length > 0) {
+      const existingCampaigns = existingParticipations.map(p => p.campaignId);
+      throw new ConflictException(
+        `Ya existe una participación con este número de ticket para las campañas: ${existingCampaigns.join(', ')}`
+      );
+    }
+
+    // Crear una participación por cada campaña elegible final
+    const participationsToCreate = finalEligibleCampaigns.map(campaign => 
+      this.participationRepository.create({
+        userId,
+        associateId: createParticipationDto.associateId,
+        campaignId: campaign.id,
+        numeroTicket: createParticipationDto.numeroTicket,
+        fechaTicket,
+        importeTotal: createParticipationDto.importeTotal,
+      })
+    );
+
+    // Guardar todas las participaciones
+    const savedParticipations = await this.participationRepository.save(participationsToCreate);
+
+    // Cargar relaciones para la respuesta
+    const participationsWithRelations = await this.participationRepository.find({
+      where: { id: In(savedParticipations.map(p => p.id)) },
+      relations: ['user', 'associate', 'campaign'],
+    });
+
+    return participationsWithRelations.map(p => this.toResponseDto(p));
   }
 
   /**
@@ -145,7 +248,7 @@ export class ParticipationsService {
       skip,
       take: limit,
       order: { createdAt: 'DESC' },
-      relations: ['user', 'associate'], // Incluir datos del usuario y comercio
+      relations: ['user', 'associate', 'campaign'], // Incluir datos del usuario, comercio y campaña
     };
 
     const [participations, total] = await this.participationRepository.findAndCount(options);
@@ -178,7 +281,7 @@ export class ParticipationsService {
   async findOne(id: string, requestingUserId?: string, canReadAll: boolean = false): Promise<ParticipationResponseDto> {
     const participation = await this.participationRepository.findOne({
       where: { id },
-      relations: ['user', 'associate'],
+      relations: ['user', 'associate', 'campaign'],
     });
 
     if (!participation) {
@@ -210,7 +313,7 @@ export class ParticipationsService {
 
     const participations = await this.participationRepository.find({
       where: { userId },
-      relations: ['associate'],
+      relations: ['associate', 'campaign'],
       order: { createdAt: 'DESC' },
     });
 
@@ -225,6 +328,7 @@ export class ParticipationsService {
       id: participation.id,
       userId: participation.userId,
       associateId: participation.associateId,
+      campaignId: participation.campaignId,
       numeroTicket: participation.numeroTicket,
       fechaTicket: participation.fechaTicket,
       importeTotal: participation.importeTotal,
@@ -241,6 +345,11 @@ export class ParticipationsService {
         id: participation.associate.id,
         nombre: participation.associate.nombre,
         direccion: participation.associate.direccion,
+      } : undefined,
+      campaign: participation.campaign ? {
+        id: participation.campaign.id,
+        nombre: participation.campaign.nombre,
+        importeMinimo: participation.campaign.importeMinimo,
       } : undefined,
     };
   }

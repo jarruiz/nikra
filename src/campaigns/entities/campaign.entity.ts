@@ -23,6 +23,21 @@ export class Campaign {
   @Column({ type: 'timestamp', nullable: false })
   fechaFin: Date;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false })
+  importeMinimo: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  cuantiaMaximaAcumulable: number;
+
+  @Column({ type: 'varchar', length: 255, nullable: false })
+  reglaParticipacion: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: false })
+  reglaRedondeo: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  basesLegalesUrl: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

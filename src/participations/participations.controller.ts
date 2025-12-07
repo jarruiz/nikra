@@ -38,16 +38,16 @@ export class ParticipationsController {
   @RequirePermissions('participations.create', 'participations.manage')
   @ApiOperation({
     summary: 'Crear nueva participación',
-    description: 'Registra una nueva participación manual con los datos del ticket de compra',
+    description: 'Registra un ticket de compra. Se crearán automáticamente participaciones en todas las campañas activas que cumplan los criterios (fecha válida, importe >= importe mínimo, y límite máximo no alcanzado)',
   })
   @ApiResponse({
     status: 201,
-    description: 'Participación creada exitosamente',
-    type: ParticipationResponseDto,
+    description: 'Participaciones creadas exitosamente',
+    type: [ParticipationResponseDto],
   })
   @ApiResponse({
     status: 400,
-    description: 'Datos de entrada inválidos o fecha/ticket inválido',
+    description: 'Datos de entrada inválidos, fecha/ticket inválido, o no cumple criterios de ninguna campaña',
   })
   @ApiResponse({
     status: 403,
@@ -59,12 +59,12 @@ export class ParticipationsController {
   })
   @ApiResponse({
     status: 409,
-    description: 'Ya existe una participación con este número de ticket',
+    description: 'Ya existe una participación con este número de ticket para alguna campaña',
   })
   async create(
     @Body() createParticipationDto: CreateParticipationDto,
     @Request() req: any,
-  ): Promise<ParticipationResponseDto> {
+  ): Promise<ParticipationResponseDto[]> {
     return this.participationsService.create(createParticipationDto, req.user.id);
   }
 

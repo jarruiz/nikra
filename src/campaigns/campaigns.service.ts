@@ -213,6 +213,11 @@ export class CampaignsService {
       isActive: false, // La copia inicia inactiva
       fechaInicio: originalCampaign.fechaInicio,
       fechaFin: originalCampaign.fechaFin,
+      importeMinimo: originalCampaign.importeMinimo,
+      cuantiaMaximaAcumulable: originalCampaign.cuantiaMaximaAcumulable,
+      reglaParticipacion: originalCampaign.reglaParticipacion,
+      reglaRedondeo: originalCampaign.reglaRedondeo,
+      basesLegalesUrl: originalCampaign.basesLegalesUrl,
     };
 
     // Verificar que el nombre de la copia no existe
@@ -300,6 +305,11 @@ export class CampaignsService {
       isActive: campaign.isActive,
       fechaInicio: campaign.fechaInicio,
       fechaFin: campaign.fechaFin,
+      importeMinimo: campaign.importeMinimo,
+      cuantiaMaximaAcumulable: campaign.cuantiaMaximaAcumulable,
+      reglaParticipacion: campaign.reglaParticipacion,
+      reglaRedondeo: campaign.reglaRedondeo,
+      basesLegalesUrl: campaign.basesLegalesUrl,
       createdAt: campaign.createdAt,
       updatedAt: campaign.updatedAt,
     };

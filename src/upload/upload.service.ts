@@ -44,7 +44,7 @@ export class UploadService {
 
   async saveFile(
     file: Express.Multer.File,
-    subfolder: 'avatars' | 'campaigns' | 'associates',
+    subfolder: 'avatars' | 'campaigns' | 'associates' | 'legal-bases',
   ): Promise<UploadResult> {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -83,7 +83,7 @@ export class UploadService {
    */
   async saveFiles(
     files: Express.Multer.File[],
-    subfolder: 'avatars' | 'campaigns' | 'associates',
+    subfolder: 'avatars' | 'campaigns' | 'associates' | 'legal-bases',
   ): Promise<BatchUploadResult> {
     if (!files || files.length === 0) {
       throw new BadRequestException('No files uploaded');
@@ -130,7 +130,7 @@ export class UploadService {
    * Obtener información de un archivo para servirlo
    */
   async getFileInfo(
-    subfolder: 'avatars' | 'campaigns' | 'associates',
+    subfolder: 'avatars' | 'campaigns' | 'associates' | 'legal-bases',
     filename: string,
   ): Promise<FileInfo> {
     const filePath = path.join(this.uploadBasePath, subfolder, filename);
@@ -172,6 +172,7 @@ export class UploadService {
       '.png': 'image/png',
       '.webp': 'image/webp',
       '.svg': 'image/svg+xml',
+      '.pdf': 'application/pdf',
     };
     
     return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
@@ -179,18 +180,20 @@ export class UploadService {
 
   private validateFileType(
     file: Express.Multer.File,
-    subfolder: 'avatars' | 'campaigns' | 'associates',
+    subfolder: 'avatars' | 'campaigns' | 'associates' | 'legal-bases',
   ): void {
     const allowedTypes = {
       avatars: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       campaigns: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
       associates: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'],
+      'legal-bases': ['application/pdf'],
     };
 
     const allowedExtensions = {
       avatars: ['.jpg', '.jpeg', '.png', '.webp'],
       campaigns: ['.jpg', '.jpeg', '.png', '.webp'],
       associates: ['.jpg', '.jpeg', '.png', '.webp', '.svg'],
+      'legal-bases': ['.pdf'],
     };
 
     const fileExtension = extname(file.originalname).toLowerCase();
@@ -209,10 +212,17 @@ export class UploadService {
   }
 
   private validateFileSize(file: Express.Multer.File): void {
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
+    const maxSize = 5 * 1024 * 1024; // 5MB para imágenes
+    const maxSizePdf = 10 * 1024 * 1024; // 10MB para PDFs
+    
+    // Determinar el tamaño máximo según el tipo
+    const isPdf = file.mimetype === 'application/pdf';
+    const maxAllowedSize = isPdf ? maxSizePdf : maxSize;
+    
+    if (file.size > maxAllowedSize) {
+      const maxSizeMB = isPdf ? 10 : 5;
       throw new BadRequestException(
-        `El archivo es demasiado grande. Tamaño máximo permitido: 5MB`,
+        `El archivo es demasiado grande. Tamaño máximo permitido: ${maxSizeMB}MB`,
       );
     }
   }

@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Associate } from '../../associates/entities/associate.entity';
+import { Campaign } from '../../campaigns/entities/campaign.entity';
 
 @Entity('participations')
 export class Participation {
@@ -12,6 +13,9 @@ export class Participation {
 
   @Column({ type: 'uuid' })
   associateId: string;
+
+  @Column({ type: 'uuid' })
+  campaignId: string;
 
   @Column({ type: 'varchar', length: 100 })
   numeroTicket: string;
@@ -35,4 +39,8 @@ export class Participation {
   @ManyToOne(() => Associate)
   @JoinColumn({ name: 'associateId' })
   associate: Associate;
+
+  @ManyToOne(() => Campaign)
+  @JoinColumn({ name: 'campaignId' })
+  campaign: Campaign;
 }

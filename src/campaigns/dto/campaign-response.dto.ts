@@ -44,6 +44,36 @@ export class CampaignResponseDto {
   fechaFin?: Date;
 
   @ApiProperty({
+    description: 'Importe mínimo requerido para participar (€)',
+    example: 10.00,
+  })
+  importeMinimo: number;
+
+  @ApiPropertyOptional({
+    description: 'Cuantía máxima acumulable por usuario en total (€). Null si no hay límite.',
+    example: 50.00,
+  })
+  cuantiaMaximaAcumulable?: number;
+
+  @ApiProperty({
+    description: 'Regla de participación',
+    example: 'Por cada 10€ de compra se acumula 1€',
+  })
+  reglaParticipacion: string;
+
+  @ApiProperty({
+    description: 'Regla de redondeo',
+    example: 'Redondeo hacia abajo',
+  })
+  reglaRedondeo: string;
+
+  @ApiPropertyOptional({
+    description: 'URL del archivo PDF de bases legales',
+    example: 'bases-legales-campana-2025.pdf',
+  })
+  basesLegalesUrl?: string;
+
+  @ApiProperty({
     description: 'Fecha de creación de la campaña',
     example: '2025-01-18T10:30:00.000Z',
   })

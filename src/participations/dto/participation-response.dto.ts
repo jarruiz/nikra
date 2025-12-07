@@ -20,6 +20,12 @@ export class ParticipationResponseDto {
   associateId: string;
 
   @ApiProperty({
+    description: 'ID de la campaña a la que pertenece la participación',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  campaignId: string;
+
+  @ApiProperty({
     description: 'Número del ticket de compra',
     example: 'T-2025-001234',
   })
@@ -62,5 +68,12 @@ export class ParticipationResponseDto {
     id: string;
     nombre: string;
     direccion: string;
+  };
+
+  // Datos de la campaña (opcional, se puede incluir en joins)
+  campaign?: {
+    id: string;
+    nombre: string;
+    importeMinimo: number;
   };
 }

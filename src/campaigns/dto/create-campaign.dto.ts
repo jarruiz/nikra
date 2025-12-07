@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, MinLength, MaxLength, IsDateString } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsString, IsNotEmpty, IsOptional, IsBoolean, MinLength, MaxLength, IsDateString, IsNumber, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateCampaignDto {
   @ApiProperty({
@@ -65,4 +65,59 @@ export class CreateCampaignDto {
   @IsNotEmpty({ message: 'La fecha de fin es requerida' })
   @IsDateString({}, { message: 'fechaFin debe ser una fecha válida en formato ISO' })
   fechaFin: string;
+
+  @ApiProperty({
+    description: 'Importe mínimo requerido para participar en la campaña (€)',
+    example: 10.00,
+    minimum: 0.01,
+  })
+  @IsNotEmpty({ message: 'El importe mínimo es requerido' })
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'El importe mínimo debe ser un número válido con máximo 2 decimales' })
+  @Type(() => Number)
+  @Min(0.01, { message: 'El importe mínimo debe ser mayor a 0' })
+  importeMinimo: number;
+
+  @ApiPropertyOptional({
+    description: 'Cuantía máxima acumulable por usuario en total para esta campaña (€). Si no se especifica, no hay límite.',
+    example: 50.00,
+    minimum: 0.01,
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'La cuantía máxima acumulable debe ser un número válido con máximo 2 decimales' })
+  @Type(() => Number)
+  @Min(0.01, { message: 'La cuantía máxima acumulable debe ser mayor a 0' })
+  cuantiaMaximaAcumulable?: number;
+
+  @ApiProperty({
+    description: 'Regla de participación de la campaña',
+    example: 'Por cada 10€ de compra se acumula 1€',
+    maxLength: 255,
+  })
+  @IsNotEmpty({ message: 'La regla de participación es requerida' })
+  @IsString({ message: 'La regla de participación debe ser una cadena de texto' })
+  @MaxLength(255, { message: 'La regla de participación no puede exceder 255 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  reglaParticipacion: string;
+
+  @ApiProperty({
+    description: 'Regla de redondeo de la campaña',
+    example: 'Redondeo hacia abajo',
+    maxLength: 255,
+  })
+  @IsNotEmpty({ message: 'La regla de redondeo es requerida' })
+  @IsString({ message: 'La regla de redondeo debe ser una cadena de texto' })
+  @MaxLength(255, { message: 'La regla de redondeo no puede exceder 255 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  reglaRedondeo: string;
+
+  @ApiPropertyOptional({
+    description: 'URL del archivo PDF de bases legales',
+    example: 'bases-legales-campana-2025.pdf',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString({ message: 'La URL de bases legales debe ser una cadena de texto' })
+  @MaxLength(500, { message: 'La URL no puede exceder 500 caracteres' })
+  @Transform(({ value }) => value?.trim())
+  basesLegalesUrl?: string;
 }
