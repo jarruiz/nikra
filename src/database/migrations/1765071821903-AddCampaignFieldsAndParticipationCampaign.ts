@@ -46,7 +46,7 @@ export class AddCampaignFieldsAndParticipationCampaign1765071821903 implements M
         type: 'varchar',
         length: '255',
         isNullable: false,
-        default: '',
+        default: "''",
       }),
     );
 
@@ -57,7 +57,7 @@ export class AddCampaignFieldsAndParticipationCampaign1765071821903 implements M
         type: 'varchar',
         length: '255',
         isNullable: false,
-        default: '',
+        default: "''",
       }),
     );
 
