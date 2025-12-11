@@ -7,6 +7,7 @@ import { Participation } from './entities/participation.entity';
 import { User } from '../users/entities/user.entity';
 import { Associate } from '../associates/entities/associate.entity';
 import { Campaign } from '../campaigns/entities/campaign.entity';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Campaign } from '../campaigns/entities/campaign.entity';
       Associate,
       Campaign,
     ]),
+    EmailModule,
   ],
   controllers: [ParticipationsController],
   providers: [ParticipationsService],

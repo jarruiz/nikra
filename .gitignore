@@ -76,3 +76,5 @@ scripts/insert-comercios-actualizados.sql
 scripts/insert-comercios-safe.sql
 docs/SETUP_GMAIL_OAUTH.md
 Client_credentials.json
+
+query-participaciones.sql

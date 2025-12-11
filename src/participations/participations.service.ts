@@ -10,6 +10,7 @@ import { CreateParticipationDto } from './dto/create-participation.dto';
 import { ParticipationResponseDto } from './dto/participation-response.dto';
 import { ParticipationSearchDto } from './dto/participation-search.dto';
 import { ParticipationsResponseDto, PaginationMetaDto } from './dto/participations-response.dto';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class ParticipationsService {
@@ -22,6 +23,7 @@ export class ParticipationsService {
     private associateRepository: Repository<Associate>,
     @InjectRepository(Campaign)
     private campaignRepository: Repository<Campaign>,
+    private emailService: EmailService,
   ) {}
 
   /**
@@ -200,6 +202,37 @@ export class ParticipationsService {
       where: { id: In(savedParticipations.map(p => p.id)) },
       relations: ['user', 'associate', 'campaign'],
     });
+
+    // Enviar email de notificación al usuario
+    if (participationsWithRelations.length > 0 && user.email) {
+      const firstParticipation = participationsWithRelations[0];
+      const campaigns = finalEligibleCampaigns.map(c => ({
+        nombre: c.nombre,
+        importeMinimo: parseFloat(c.importeMinimo.toString()),
+      }));
+
+      // Formatear fecha para el email
+      const fechaFormateada = new Date(firstParticipation.fechaTicket).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      try {
+        await this.emailService.sendParticipationNotification(
+          user.email,
+          user.fullName,
+          createParticipationDto.numeroTicket,
+          fechaFormateada,
+          createParticipationDto.importeTotal,
+          campaigns,
+          associate.nombre,
+        );
+      } catch (error) {
+        // El error ya se maneja dentro del EmailService, solo continuamos
+        // La participación ya se creó exitosamente
+      }
+    }
 
     return participationsWithRelations.map(p => this.toResponseDto(p));
   }

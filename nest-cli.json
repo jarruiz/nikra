@@ -5,6 +5,13 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "tsConfigPath": "tsconfig.json"
+    "tsConfigPath": "tsconfig.json",
+    "assets": [
+      {
+        "include": "email/templates/**/*.html",
+        "outDir": "dist",
+        "watchAssets": true
+      }
+    ]
   }
 }

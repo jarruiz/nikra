@@ -4,6 +4,7 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import * as nodemailer from 'nodemailer';
 import { getPasswordResetEmailTemplate } from './templates/password-reset.template';
+import { getParticipationNotificationTemplate } from './templates/participation-notification.template';
 
 @Injectable()
 export class EmailService {
@@ -123,6 +124,71 @@ export class EmailService {
     } catch (error) {
       this.logger.error(`Error enviando email a ${to}:`, error);
       throw new InternalServerErrorException('Error al enviar el email de recuperación');
+    }
+  }
+
+  /**
+   * Envía email de notificación cuando se crea una nueva participación
+   */
+  async sendParticipationNotification(
+    to: string,
+    userName: string,
+    numeroTicket: string,
+    fechaTicket: string,
+    importeTotal: number,
+    campaigns: Array<{ nombre: string; importeMinimo: number }>,
+    associateName: string,
+  ): Promise<void> {
+    const emailConfig = this.configService.get('email');
+
+    try {
+      // Configurar transporter si no está inicializado
+      if (!this.transporter) {
+        await this.setupTransporter();
+      }
+
+      // Obtener plantilla HTML
+      const htmlContent = getParticipationNotificationTemplate(
+        userName,
+        numeroTicket,
+        fechaTicket,
+        importeTotal,
+        campaigns,
+        associateName,
+      );
+
+      // Formatear fecha para el texto plano
+      const fechaFormateada = new Date(fechaTicket).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      // Generar texto plano de las campañas
+      const campaignsText = campaigns
+        .map(c => `- ${c.nombre} (mínimo: ${c.importeMinimo}€)`)
+        .join('\n');
+
+      // Configurar opciones del email
+      const mailOptions = {
+        from: {
+          name: 'CCA Ceuta - Participaciones',
+          address: emailConfig.gmail.userEmail,
+        },
+        to: to,
+        subject: 'Nueva Participación Registrada - CCA Ceuta',
+        html: htmlContent,
+        text: `Hola ${userName},\n\nTe informamos que se ha registrado exitosamente tu participación con el siguiente ticket:\n\nNúmero de Ticket: ${numeroTicket}\nFecha: ${fechaFormateada}\nImporte: ${importeTotal.toFixed(2)}€\nComercio: ${associateName}\n\n¡Felicidades! Tu ticket cumple los requisitos y has participado automáticamente en las siguientes campañas:\n\n${campaignsText}\n\nGracias por participar. Te mantendremos informado sobre el estado de las campañas.\n\nSi tienes alguna pregunta, no dudes en contactarnos.\n\n© ${new Date().getFullYear()} Centro Comercial Abierto de Ceuta.\nEste es un correo automático, por favor no respondas a este mensaje.`,
+      };
+
+      // Enviar email
+      const info = await this.transporter.sendMail(mailOptions);
+      this.logger.log(`✅ Email de notificación de participación enviado a ${to}. MessageId: ${info.messageId}`);
+    } catch (error) {
+      this.logger.error(`Error enviando email de notificación a ${to}:`, error);
+      // No lanzar excepción para no interrumpir el flujo de creación de participación
+      // Solo loguear el error
+      this.logger.warn('⚠️ La participación se creó correctamente pero no se pudo enviar el email de notificación');
     }
   }
 }
