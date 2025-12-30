@@ -20,6 +20,7 @@ import { AssociatesModule } from './associates/associates.module';
 import { ExportModule } from './export/export.module';
 import { UploadModule } from './upload/upload.module';
 import { RolesModule } from './roles/roles.module';
+import { TicketsModule } from './tickets/tickets.module';
 
 // Entidades
 import { User } from './users/entities/user.entity';
@@ -85,6 +86,7 @@ import { Permission } from './roles/entities/permission.entity';
     AssociatesModule,
     ExportModule,
     UploadModule,
+    TicketsModule,
   ],
 })
 export class AppModule {}
