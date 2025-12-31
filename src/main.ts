@@ -17,7 +17,8 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Configurar trust proxy para Render (importante para rate limiting y IPs reales)
-  app.set('trust proxy', true);
+  // Usar 1 en lugar de true para confiar solo en el primer proxy (Render) y reducir warnings
+  app.set('trust proxy', 1);
 
   // Configurar prefijo global para API
   app.setGlobalPrefix('api');
