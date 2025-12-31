@@ -66,25 +66,53 @@ echo -e "${BLUE}📊 PASO 1: EJECUTANDO MIGRACIONES DE BASE DE DATOS${NC}"
 echo -e "${BLUE}⏰ Inicio: $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
 separator
 
-# Verificar conexión a la base de datos antes de ejecutar migraciones
+# Verificar variables de entorno de base de datos
 if [ -z "$DB_HOST" ] || [ -z "$DB_DATABASE" ]; then
-    log_warning "Variables de entorno de BD no completamente configuradas"
-    log_warning "Continuando de todas formas..."
+    error_exit "Variables de entorno de BD no configuradas. DB_HOST y DB_DATABASE son requeridas."
 fi
+
+# Validar formato del hostname (debe contener un punto para indicar dominio completo)
+if [[ ! "$DB_HOST" =~ \. ]]; then
+    error_exit "DB_HOST tiene un formato incorrecto: '$DB_HOST'. El hostname debe incluir el dominio completo (ej: dpg-xxxxx-a.oregon-postgres.render.com). Verifica las variables de entorno en Render y asegúrate de que la base de datos esté vinculada correctamente al servicio web."
+fi
+
+# Validar que el hostname no esté vacío o solo con espacios
+if [ -z "${DB_HOST// }" ]; then
+    error_exit "DB_HOST está vacío. Verifica las variables de entorno en Render."
+fi
+
+log_info "Validación de variables de entorno: OK"
 
 # Ejecutar migraciones con captura de salida
 MIGRATION_START=$(date +%s)
-if npm run migration:run 2>&1; then
+MIGRATION_OUTPUT=$(npm run migration:run 2>&1) || {
     MIGRATION_END=$(date +%s)
     MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
-    log_success "Migraciones ejecutadas correctamente"
-    echo -e "${GREEN}⏱️  Duración: ${MIGRATION_DURATION} segundos${NC}"
-    echo -e "${GREEN}⏰ Fin: $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
-else
-    MIGRATION_END=$(date +%s)
-    MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
+    
+    # Detectar errores específicos de conexión
+    if echo "$MIGRATION_OUTPUT" | grep -q "ENOTFOUND\|getaddrinfo"; then
+        log_warning "Error de conexión a la base de datos detectado"
+        echo -e "${YELLOW}Detalles del error:${NC}"
+        echo "$MIGRATION_OUTPUT" | grep -i "error\|ENOTFOUND\|getaddrinfo" | head -5
+        echo ""
+        error_exit "No se pudo conectar a la base de datos. Verifica que:
+  1. La variable DB_HOST tenga el formato correcto (debe incluir el dominio completo)
+  2. La base de datos esté vinculada correctamente al servicio web en Render
+  3. Las variables de entorno estén configuradas correctamente en Render Dashboard
+  Hostname actual: ${DB_HOST}"
+    fi
+    
+    # Otro tipo de error
+    echo -e "${RED}Salida del error:${NC}"
+    echo "$MIGRATION_OUTPUT"
     error_exit "Las migraciones fallaron después de ${MIGRATION_DURATION} segundos. No se iniciará el backend."
-fi
+}
+
+MIGRATION_END=$(date +%s)
+MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
+log_success "Migraciones ejecutadas correctamente"
+echo -e "${GREEN}⏱️  Duración: ${MIGRATION_DURATION} segundos${NC}"
+echo -e "${GREEN}⏰ Fin: $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
 
 separator
 

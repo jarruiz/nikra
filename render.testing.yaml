@@ -1,0 +1,111 @@
+# ==============================================
+# 🚀 CONFIGURACIÓN DE RENDER - TESTING
+# ==============================================
+# Este archivo define la infraestructura en Render para el ambiente de testing
+# Usa plan FREE para reducir costos en desarrollo/testing
+
+services:
+  # ==============================================
+  # 🎯 SERVICIO WEB (Backend NestJS) - TESTING
+  # ==============================================
+  - type: web
+    name: nikra-backend-testing
+    env: node
+    region: frankfurt  # Frankfurt (Alemania) - Única región europea, óptima para España
+    plan: free  # Plan FREE para testing (hiberna después de 15 min de inactividad)
+    branch: testing  # Rama de Git que se desplegará
+    buildCommand: npm install --include=dev && npx nest build
+    startCommand: ./scripts/start-with-migrations.sh
+    healthCheckPath: /api/docs
+    
+    # Variables de entorno
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: PORT
+        value: 3000
+      
+      # Base de datos de testing (vinculada al servicio de PostgreSQL abajo)
+      - key: DB_HOST
+        fromDatabase:
+          name: nikra-db-testing
+          property: host
+      
+      - key: DB_PORT
+        fromDatabase:
+          name: nikra-db-testing
+          property: port
+      
+      - key: DB_USERNAME
+        fromDatabase:
+          name: nikra-db-testing
+          property: user
+      
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nikra-db-testing
+          property: password
+      
+      - key: DB_DATABASE
+        fromDatabase:
+          name: nikra_db_testing_ixbv
+          property: database
+      
+      # JWT Secrets para testing (diferentes de producción)
+      - key: JWT_SECRET
+        value: nikra-jwt-secret-testing-2025-key-xyz789
+      
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      
+      - key: JWT_REFRESH_SECRET
+        value: nikra-refresh-secret-testing-2025-key-abc123
+      
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      
+      # Rate Limiting - Configuración para testing
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000  # 15 minutos en milisegundos
+      
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 1000    # 1000 requests por ventana (66.7 req/min)
+      
+      # CORS - Orígenes permitidos para testing
+      - key: ALLOWED_ORIGINS
+        value: https://nikra-backend-testing.onrender.com,https://nikra-front.vercel.app,http://localhost:3000,http://localhost:4200
+      
+      # Gmail OAuth - Configuración para envío de emails (mismo que producción)
+      - key: GMAIL_CLIENT_ID
+        value: ""  # Configurar en Render Dashboard
+      
+      - key: GMAIL_CLIENT_SECRET
+        value: ""  # Configurar en Render Dashboard
+      
+      - key: GMAIL_REFRESH_TOKEN
+        value: ""  # Configurar refresh token obtenido mediante OAuth2 flow
+      
+      - key: GMAIL_USER_EMAIL
+        value: soporte@ccaceuta.com
+      
+      - key: FRONTEND_RESET_URL
+        value: https://sorteos.centrocomercialabiertodeceuta.es/reset-password
+      
+      - key: RESET_TOKEN_EXPIRES_IN
+        value: 3600000  # 1 hora en milisegundos
+    
+    # Nota: Disco persistente no disponible en plan FREE
+    # Los archivos subidos se perderán al reiniciar el servicio
+    # Para persistencia, actualiza al plan Starter o superior
+
+# ==============================================
+# 🗄️ BASE DE DATOS POSTGRESQL - TESTING (FREE)
+# ==============================================
+databases:
+  - name: nikra-db-testing
+    databaseName: nikra_db_testing
+    user: nikra_user_testing
+    plan: free  # ⭐ Plan FREE para testing (expira después de 90 días de inactividad)
+    region: frankfurt  # Frankfurt - IMPORTANTE: Debe ser la misma región que el servicio web
+    ipAllowList: []  # Vacío = accesible solo desde servicios de Render
