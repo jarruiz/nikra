@@ -26,6 +26,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { User } from './users/entities/user.entity';
 import { Campaign } from './campaigns/entities/campaign.entity';
 import { Participation } from './participations/entities/participation.entity';
+import { Ticket } from './tickets/entities/ticket.entity';
 import { Associate } from './associates/entities/associate.entity';
 import { Role } from './roles/entities/role.entity';
 import { Permission } from './roles/entities/permission.entity';
@@ -51,7 +52,7 @@ import { Permission } from './roles/entities/permission.entity';
           username: dbConfig.username,
           password: dbConfig.password,
           database: dbConfig.database,
-          entities: [User, Campaign, Participation, Associate, Role, Permission],
+          entities: [User, Campaign, Participation, Ticket, Associate, Role, Permission],
           migrations: [join(__dirname, 'database/migrations/*{.ts,.js}')],
           synchronize: false, // Usar migraciones en su lugar
           migrationsRun: process.env.NODE_ENV === 'production', // Auto-run migraciones en producción

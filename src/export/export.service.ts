@@ -54,19 +54,20 @@ export class ExportService {
 
     // Agregar datos
     participations.forEach((participation, index) => {
+      const ticket = participation.ticket;
       const row = worksheet.addRow({
         id: participation.id,
-        userId: participation.userId,
-        userFullName: participation.user?.fullName || '',
-        userEmail: participation.user?.email || '',
-        userDni: participation.user?.dni || '',
-        userPhone: participation.user?.phone || '',
-        associateId: participation.associateId,
-        associateNombre: participation.associate?.nombre || '',
-        associateDireccion: participation.associate?.direccion || '',
-        numeroTicket: participation.numeroTicket,
-        fechaTicket: participation.fechaTicket,
-        importeTotal: participation.importeTotal,
+        userId: ticket?.userId || '',
+        userFullName: ticket?.user?.fullName || '',
+        userEmail: ticket?.user?.email || '',
+        userDni: ticket?.user?.dni || '',
+        userPhone: ticket?.user?.phone || '',
+        associateId: ticket?.associateId || '',
+        associateNombre: ticket?.associate?.nombre || '',
+        associateDireccion: ticket?.associate?.direccion || '',
+        numeroTicket: ticket?.numeroTicket || '',
+        fechaTicket: ticket?.fechaTicket || '',
+        importeTotal: ticket?.importeTotal || 0,
         createdAt: participation.createdAt,
       });
 
@@ -130,21 +131,24 @@ export class ExportService {
     ];
 
     // Crear filas de datos
-    const csvRows = participations.map(participation => [
-      participation.id,
-      participation.userId,
-      participation.user?.fullName || '',
-      participation.user?.email || '',
-      participation.user?.dni || '',
-      participation.user?.phone || '',
-      participation.associateId,
-      participation.associate?.nombre || '',
-      participation.associate?.direccion || '',
-      participation.numeroTicket,
-      participation.fechaTicket.toISOString().split('T')[0], // Solo fecha
-      participation.importeTotal.toString().replace('.', ','), // Formato europeo
-      participation.createdAt.toISOString(),
-    ]);
+    const csvRows = participations.map(participation => {
+      const ticket = participation.ticket;
+      return [
+        participation.id,
+        ticket?.userId || '',
+        ticket?.user?.fullName || '',
+        ticket?.user?.email || '',
+        ticket?.user?.dni || '',
+        ticket?.user?.phone || '',
+        ticket?.associateId || '',
+        ticket?.associate?.nombre || '',
+        ticket?.associate?.direccion || '',
+        ticket?.numeroTicket || '',
+        ticket?.fechaTicket ? new Date(ticket.fechaTicket).toISOString().split('T')[0] : '', // Solo fecha
+        ticket?.importeTotal ? ticket.importeTotal.toString().replace('.', ',') : '0', // Formato europeo
+        participation.createdAt.toISOString(),
+      ];
+    });
 
     // Combinar encabezados y datos
     const csvContent = [headers, ...csvRows]
@@ -164,39 +168,42 @@ export class ExportService {
    * Obtener participaciones con filtros aplicados
    */
   private async getParticipationsWithFilters(filters: ExportQueryDto) {
-    const whereConditions: any = {};
+    // Usar query builder para permitir filtros en tickets relacionados
+    const queryBuilder = this.participationRepository
+      .createQueryBuilder('participation')
+      .leftJoinAndSelect('participation.ticket', 'ticket')
+      .leftJoinAndSelect('ticket.user', 'user')
+      .leftJoinAndSelect('ticket.associate', 'associate');
 
     if (filters.userId) {
-      whereConditions.userId = filters.userId;
+      queryBuilder.andWhere('ticket.userId = :userId', { userId: filters.userId });
     }
 
     if (filters.associateId) {
-      whereConditions.associateId = filters.associateId;
+      queryBuilder.andWhere('ticket.associateId = :associateId', { associateId: filters.associateId });
     }
 
     if (filters.numeroTicket) {
-      whereConditions.numeroTicket = Like(`%${filters.numeroTicket}%`);
+      queryBuilder.andWhere('ticket.numeroTicket LIKE :numeroTicket', { numeroTicket: `%${filters.numeroTicket}%` });
     }
 
-    // Filtros de fecha
+    // Filtros de fecha en ticket
     if (filters.fechaDesde || filters.fechaHasta) {
       const fechaDesde = filters.fechaDesde ? new Date(filters.fechaDesde) : undefined;
       const fechaHasta = filters.fechaHasta ? new Date(filters.fechaHasta) : undefined;
       
       if (fechaDesde && fechaHasta) {
-        whereConditions.fechaTicket = Between(fechaDesde, fechaHasta);
+        queryBuilder.andWhere('ticket.fechaTicket BETWEEN :fechaDesde AND :fechaHasta', { fechaDesde, fechaHasta });
       } else if (fechaDesde) {
-        whereConditions.fechaTicket = MoreThanOrEqual(fechaDesde);
+        queryBuilder.andWhere('ticket.fechaTicket >= :fechaDesde', { fechaDesde });
       } else if (fechaHasta) {
-        whereConditions.fechaTicket = LessThanOrEqual(fechaHasta);
+        queryBuilder.andWhere('ticket.fechaTicket <= :fechaHasta', { fechaHasta });
       }
     }
 
-    const participations = await this.participationRepository.find({
-      where: whereConditions,
-      relations: ['user', 'associate'],
-      order: { createdAt: 'DESC' },
-    });
+    queryBuilder.orderBy('participation.createdAt', 'DESC');
+
+    const participations = await queryBuilder.getMany();
 
     return participations;
   }
@@ -216,15 +223,15 @@ export class ExportService {
   }> {
     const participations = await this.getParticipationsWithFilters(filters);
 
-    const uniqueUsers = new Set(participations.map(p => p.userId));
-    const uniqueAssociates = new Set(participations.map(p => p.associateId));
+    const uniqueUsers = new Set(participations.map(p => p.ticket?.userId).filter(Boolean));
+    const uniqueAssociates = new Set(participations.map(p => p.ticket?.associateId).filter(Boolean));
     
     const dateRange = participations.length > 0 ? {
-      desde: new Date(Math.min(...participations.map(p => new Date(p.fechaTicket).getTime()))),
-      hasta: new Date(Math.max(...participations.map(p => new Date(p.fechaTicket).getTime()))),
+      desde: new Date(Math.min(...participations.map(p => p.ticket?.fechaTicket ? new Date(p.ticket.fechaTicket).getTime() : Infinity).filter(t => t !== Infinity))),
+      hasta: new Date(Math.max(...participations.map(p => p.ticket?.fechaTicket ? new Date(p.ticket.fechaTicket).getTime() : -Infinity).filter(t => t !== -Infinity))),
     } : { desde: null, hasta: null };
 
-    const totalAmount = participations.reduce((sum, p) => sum + Number(p.importeTotal), 0);
+    const totalAmount = participations.reduce((sum, p) => sum + Number(p.ticket?.importeTotal || 0), 0);
 
     return {
       totalParticipations: participations.length,

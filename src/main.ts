@@ -20,11 +20,8 @@ async function bootstrap() {
   // Usar 1 en lugar de true para confiar solo en el primer proxy (Render) y reducir warnings
   app.set('trust proxy', 1);
 
-  // Configurar prefijo global para API
-  app.setGlobalPrefix('api');
-
-  // Health check endpoint (sin rate limiting)
-  app.use('/api/health', (req, res) => {
+  // Health check endpoint (sin rate limiting) - debe estar ANTES del prefijo global
+  app.use('/health', (req, res) => {
     res.status(200).json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -32,6 +29,9 @@ async function bootstrap() {
       environment: process.env.NODE_ENV || 'development'
     });
   });
+
+  // Configurar prefijo global para API
+  app.setGlobalPrefix('api');
 
   // Configurar archivos estáticos (imágenes)
   setupStaticFiles(app);

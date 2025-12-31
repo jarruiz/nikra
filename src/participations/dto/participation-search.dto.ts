@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsDateString, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsDateString, IsInt, Min, Max, IsBoolean } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class ParticipationSearchDto {
@@ -20,7 +20,7 @@ export class ParticipationSearchDto {
   associateId?: string;
 
   @ApiPropertyOptional({
-    description: 'Búsqueda por número de ticket',
+    description: 'Búsqueda por número de ticket. Busca en el ticket asociado.',
     example: 'T-2025-',
   })
   @IsOptional()
@@ -29,7 +29,7 @@ export class ParticipationSearchDto {
   numeroTicket?: string;
 
   @ApiPropertyOptional({
-    description: 'Fecha desde (formato YYYY-MM-DD)',
+    description: 'Fecha desde (formato YYYY-MM-DD). Busca en la fecha del ticket asociado.',
     example: '2025-01-01',
   })
   @IsOptional()
@@ -37,12 +37,25 @@ export class ParticipationSearchDto {
   fechaDesde?: string;
 
   @ApiPropertyOptional({
-    description: 'Fecha hasta (formato YYYY-MM-DD)',
+    description: 'Fecha hasta (formato YYYY-MM-DD). Busca en la fecha del ticket asociado.',
     example: '2025-12-31',
   })
   @IsOptional()
   @IsDateString({}, { message: 'La fecha hasta debe tener formato YYYY-MM-DD' })
   fechaHasta?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filtrar por estado de validación del ticket',
+    example: true,
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value === undefined ? undefined : Boolean(value);
+  })
+  @IsBoolean({ message: 'El filtro validated debe ser un valor booleano' })
+  validated?: boolean;
 
   @ApiPropertyOptional({
     description: 'Número de página',

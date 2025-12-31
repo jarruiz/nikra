@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TicketResponseDto } from '../../tickets/dto/ticket-response.dto';
 
 export class ParticipationResponseDto {
   @ApiProperty({
@@ -8,40 +9,16 @@ export class ParticipationResponseDto {
   id: string;
 
   @ApiProperty({
-    description: 'ID del usuario que realizó la participación',
+    description: 'ID del ticket asociado',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  userId: string;
-
-  @ApiProperty({
-    description: 'ID del comercio donde se realizó la compra',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  associateId: string;
+  ticketId: string;
 
   @ApiProperty({
     description: 'ID de la campaña a la que pertenece la participación',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   campaignId: string;
-
-  @ApiProperty({
-    description: 'Número del ticket de compra',
-    example: 'T-2025-001234',
-  })
-  numeroTicket: string;
-
-  @ApiProperty({
-    description: 'Fecha del ticket de compra',
-    example: '2025-01-18T00:00:00.000Z',
-  })
-  fechaTicket: Date;
-
-  @ApiProperty({
-    description: 'Importe total de la compra en euros',
-    example: 25.99,
-  })
-  importeTotal: number;
 
   @ApiProperty({
     description: 'Fecha de creación de la participación',
@@ -55,20 +32,12 @@ export class ParticipationResponseDto {
   })
   updatedAt: Date;
 
-  // Datos del usuario (opcional, se puede incluir en joins)
-  user?: {
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string;
-  };
-
-  // Datos del comercio (opcional, se puede incluir en joins)
-  associate?: {
-    id: string;
-    nombre: string;
-    direccion: string;
-  };
+  // Datos del ticket (opcional, se puede incluir en joins)
+  @ApiPropertyOptional({
+    description: 'Información completa del ticket asociado',
+    type: TicketResponseDto,
+  })
+  ticket?: TicketResponseDto;
 
   // Datos de la campaña (opcional, se puede incluir en joins)
   campaign?: {

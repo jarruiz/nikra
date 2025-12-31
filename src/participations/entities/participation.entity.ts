@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-import { Associate } from '../../associates/entities/associate.entity';
+import { Ticket } from '../../tickets/entities/ticket.entity';
 import { Campaign } from '../../campaigns/entities/campaign.entity';
 
 @Entity('participations')
@@ -9,22 +8,10 @@ export class Participation {
   id: string;
 
   @Column({ type: 'uuid' })
-  userId: string;
-
-  @Column({ type: 'uuid' })
-  associateId: string;
+  ticketId: string;
 
   @Column({ type: 'uuid', nullable: true })
   campaignId: string;
-
-  @Column({ type: 'varchar', length: 100 })
-  numeroTicket: string;
-
-  @Column({ type: 'date' })
-  fechaTicket: Date;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  importeTotal: number;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -32,13 +19,9 @@ export class Participation {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user: User;
-
-  @ManyToOne(() => Associate)
-  @JoinColumn({ name: 'associateId' })
-  associate: Associate;
+  @ManyToOne(() => Ticket)
+  @JoinColumn({ name: 'ticketId' })
+  ticket: Ticket;
 
   @ManyToOne(() => Campaign, { nullable: true })
   @JoinColumn({ name: 'campaignId' })

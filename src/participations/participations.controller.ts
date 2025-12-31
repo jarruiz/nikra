@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -23,6 +24,7 @@ import { CreateParticipationDto } from './dto/create-participation.dto';
 import { ParticipationResponseDto } from './dto/participation-response.dto';
 import { ParticipationSearchDto } from './dto/participation-search.dto';
 import { ParticipationsResponseDto } from './dto/participations-response.dto';
+import { UpdateTicketValidationDto } from '../tickets/dto/update-ticket-validation.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -167,5 +169,39 @@ export class ParticipationsController {
     const userPermissions: string[] = req.user.permissions || [];
     const canReadAll = userPermissions.includes('participations.read.all') || userPermissions.includes('participations.manage');
     return this.participationsService.findOne(id, req.user.id, canReadAll);
+  }
+
+  @Patch(':id/validate')
+  @RequirePermissions('participations.update', 'participations.manage')
+  @ApiOperation({
+    summary: 'Validar o invalidar ticket',
+    description: 'Cambia el estado de validación de un ticket (participación). Solo administradores pueden realizar esta acción. La validación afecta todas las participaciones del ticket.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID único de la participación',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Estado de validación actualizado exitosamente',
+    type: ParticipationResponseDto,
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'No tienes permisos para validar/invalidar participaciones',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Participación no encontrada',
+  })
+  async updateValidation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateValidationDto: UpdateTicketValidationDto,
+    @Request() req: any,
+  ): Promise<ParticipationResponseDto> {
+    const userPermissions: string[] = req.user.permissions || [];
+    const canManage = userPermissions.includes('participations.update') || userPermissions.includes('participations.manage');
+    return this.participationsService.updateTicketValidation(id, updateValidationDto.validated, req.user.id, canManage);
   }
 }

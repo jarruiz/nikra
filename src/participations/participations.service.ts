@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, FindManyOptions, Like, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
 
 import { Participation } from './entities/participation.entity';
+import { Ticket } from '../tickets/entities/ticket.entity';
 import { User } from '../users/entities/user.entity';
 import { Associate } from '../associates/entities/associate.entity';
 import { Campaign } from '../campaigns/entities/campaign.entity';
@@ -17,6 +18,8 @@ export class ParticipationsService {
   constructor(
     @InjectRepository(Participation)
     private participationRepository: Repository<Participation>,
+    @InjectRepository(Ticket)
+    private ticketRepository: Repository<Ticket>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(Associate)
@@ -66,21 +69,21 @@ export class ParticipationsService {
       throw new BadRequestException('La fecha del ticket no puede ser anterior a 30 días');
     }
 
-    // Verificar límite de participaciones por día (máximo 5 por usuario por día)
+    // Verificar límite de tickets por día (máximo 5 por usuario por día)
     const startOfDay = new Date(fechaTicket);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(fechaTicket);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const dailyParticipations = await this.participationRepository.count({
+    const dailyTickets = await this.ticketRepository.count({
       where: {
         userId,
         fechaTicket: Between(startOfDay, endOfDay),
       },
     });
 
-    if (dailyParticipations >= 5) {
-      throw new ForbiddenException('Has alcanzado el límite máximo de 5 participaciones por día');
+    if (dailyTickets >= 5) {
+      throw new ForbiddenException('Has alcanzado el límite máximo de 5 tickets por día');
     }
 
     // Buscar todas las campañas activas que cumplan los criterios básicos:
@@ -109,21 +112,23 @@ export class ParticipationsService {
     }
 
     // Verificar límite máximo acumulable por usuario en cada campaña
-    // Calcular el total acumulado del usuario en cada campaña
+    // Calcular el total acumulado del usuario en cada campaña usando tickets a través de participaciones
     const campaignsWithAccumulated = await Promise.all(
       eligibleCampaigns.map(async (campaign) => {
-        // Calcular el total acumulado del usuario en esta campaña
+        // Obtener todas las participaciones de esta campaña con sus tickets
         const participations = await this.participationRepository.find({
           where: {
-            userId,
             campaignId: campaign.id,
           },
+          relations: ['ticket'],
         });
 
-        // Sumar los importes totales de todas las participaciones previas del usuario en esta campaña
-        const acumuladoActual = participations.reduce((sum, p) => {
-          return sum + parseFloat(p.importeTotal.toString());
-        }, 0);
+        // Filtrar participaciones del usuario y sumar importes de tickets
+        const acumuladoActual = participations
+          .filter(p => p.ticket.userId === userId)
+          .reduce((sum, p) => {
+            return sum + parseFloat(p.ticket.importeTotal.toString());
+          }, 0);
 
         // Verificar si el nuevo ticket superaría el límite
         const nuevoAcumulado = acumuladoActual + createParticipationDto.importeTotal;
@@ -164,33 +169,71 @@ export class ParticipationsService {
       );
     }
 
-    // Verificar que no exista ya una participación con el mismo número de ticket
-    // para este usuario y comercio en alguna de las campañas elegibles finales
-    const existingParticipations = await this.participationRepository.find({
+    // Verificar si ya existe un ticket con el mismo número para este usuario y comercio
+    const existingTicket = await this.ticketRepository.findOne({
       where: {
         numeroTicket: createParticipationDto.numeroTicket,
+        userId,
         associateId: createParticipationDto.associateId,
-        userId: userId,
-        campaignId: In(finalEligibleCampaigns.map(c => c.id)),
       },
     });
 
-    if (existingParticipations.length > 0) {
-      const existingCampaigns = existingParticipations.map(p => p.campaignId);
-      throw new ConflictException(
-        `Ya existe una participación con este número de ticket para las campañas: ${existingCampaigns.join(', ')}`
+    if (existingTicket) {
+      // Si el ticket existe, verificar que no haya participaciones duplicadas en las campañas elegibles
+      const existingParticipations = await this.participationRepository.find({
+        where: {
+          ticketId: existingTicket.id,
+          campaignId: In(finalEligibleCampaigns.map(c => c.id)),
+        },
+      });
+
+      if (existingParticipations.length > 0) {
+        const existingCampaigns = existingParticipations.map(p => p.campaignId);
+        throw new ConflictException(
+          `Ya existe una participación con este número de ticket para las campañas: ${existingCampaigns.join(', ')}`
+        );
+      }
+
+      // Si el ticket existe pero no hay participaciones en las campañas elegibles, usar el ticket existente
+      const ticket = existingTicket;
+      const participationsToCreate = finalEligibleCampaigns.map(campaign => 
+        this.participationRepository.create({
+          ticketId: ticket.id,
+          campaignId: campaign.id,
+        })
       );
+
+      const savedParticipations = await this.participationRepository.save(participationsToCreate);
+
+      // Cargar relaciones para la respuesta
+      const participationsWithRelations = await this.participationRepository.find({
+        where: { id: In(savedParticipations.map(p => p.id)) },
+        relations: ['ticket', 'ticket.user', 'ticket.associate', 'campaign'],
+      });
+
+      // Enviar email de notificación
+      await this.sendNotificationEmail(user, associate, ticket, finalEligibleCampaigns);
+
+      return participationsWithRelations.map(p => this.toResponseDto(p));
     }
+
+    // Crear el ticket primero
+    const ticket = this.ticketRepository.create({
+      userId,
+      associateId: createParticipationDto.associateId,
+      numeroTicket: createParticipationDto.numeroTicket,
+      fechaTicket,
+      importeTotal: createParticipationDto.importeTotal,
+      validated: false,
+    });
+
+    const savedTicket = await this.ticketRepository.save(ticket);
 
     // Crear una participación por cada campaña elegible final
     const participationsToCreate = finalEligibleCampaigns.map(campaign => 
       this.participationRepository.create({
-        userId,
-        associateId: createParticipationDto.associateId,
+        ticketId: savedTicket.id,
         campaignId: campaign.id,
-        numeroTicket: createParticipationDto.numeroTicket,
-        fechaTicket,
-        importeTotal: createParticipationDto.importeTotal,
       })
     );
 
@@ -200,41 +243,52 @@ export class ParticipationsService {
     // Cargar relaciones para la respuesta
     const participationsWithRelations = await this.participationRepository.find({
       where: { id: In(savedParticipations.map(p => p.id)) },
-      relations: ['user', 'associate', 'campaign'],
+      relations: ['ticket', 'ticket.user', 'ticket.associate', 'campaign'],
     });
 
     // Enviar email de notificación al usuario
-    if (participationsWithRelations.length > 0 && user.email) {
-      const firstParticipation = participationsWithRelations[0];
-      const campaigns = finalEligibleCampaigns.map(c => ({
-        nombre: c.nombre,
-        importeMinimo: parseFloat(c.importeMinimo.toString()),
-      }));
-
-      // Formatear fecha para el email
-      const fechaFormateada = new Date(firstParticipation.fechaTicket).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-
-      try {
-        await this.emailService.sendParticipationNotification(
-          user.email,
-          user.fullName,
-          createParticipationDto.numeroTicket,
-          fechaFormateada,
-          createParticipationDto.importeTotal,
-          campaigns,
-          associate.nombre,
-        );
-      } catch (error) {
-        // El error ya se maneja dentro del EmailService, solo continuamos
-        // La participación ya se creó exitosamente
-      }
-    }
+    await this.sendNotificationEmail(user, associate, savedTicket, finalEligibleCampaigns);
 
     return participationsWithRelations.map(p => this.toResponseDto(p));
+  }
+
+  /**
+   * Método auxiliar para enviar email de notificación
+   */
+  private async sendNotificationEmail(
+    user: User,
+    associate: Associate,
+    ticket: Ticket,
+    campaigns: Campaign[]
+  ): Promise<void> {
+    if (!user.email) {
+      return;
+    }
+
+    const campaignsInfo = campaigns.map(c => ({
+      nombre: c.nombre,
+      importeMinimo: parseFloat(c.importeMinimo.toString()),
+    }));
+
+    const fechaFormateada = new Date(ticket.fechaTicket).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    try {
+      await this.emailService.sendParticipationNotification(
+        user.email,
+        user.fullName,
+        ticket.numeroTicket,
+        fechaFormateada,
+        parseFloat(ticket.importeTotal.toString()),
+        campaignsInfo,
+        associate.nombre,
+      );
+    } catch (error) {
+      // El error ya se maneja dentro del EmailService, solo continuamos
+    }
   }
 
   /**
@@ -244,47 +298,55 @@ export class ParticipationsService {
     const { page = 1, limit = 20, ...filters } = searchDto;
     const skip = (page - 1) * limit;
 
-    // Construir condiciones de búsqueda
-    const whereConditions: any = {};
+    // Construir query builder para permitir filtros en tickets relacionados
+    const queryBuilder = this.participationRepository
+      .createQueryBuilder('participation')
+      .leftJoinAndSelect('participation.ticket', 'ticket')
+      .leftJoinAndSelect('ticket.user', 'user')
+      .leftJoinAndSelect('ticket.associate', 'associate')
+      .leftJoinAndSelect('participation.campaign', 'campaign');
 
     // Si no tiene permiso para leer todas, solo puede ver sus propias participaciones
     if (!canReadAll && requestingUserId && !filters.userId) {
-      whereConditions.userId = requestingUserId;
+      queryBuilder.andWhere('ticket.userId = :requestingUserId', { requestingUserId });
     } else if (filters.userId) {
-      whereConditions.userId = filters.userId;
+      queryBuilder.andWhere('ticket.userId = :userId', { userId: filters.userId });
     }
 
     if (filters.associateId) {
-      whereConditions.associateId = filters.associateId;
+      queryBuilder.andWhere('ticket.associateId = :associateId', { associateId: filters.associateId });
     }
 
     if (filters.numeroTicket) {
-      whereConditions.numeroTicket = Like(`%${filters.numeroTicket}%`);
+      queryBuilder.andWhere('ticket.numeroTicket LIKE :numeroTicket', { numeroTicket: `%${filters.numeroTicket}%` });
     }
 
-    // Filtros de fecha
+    // Filtros de fecha en ticket
     if (filters.fechaDesde || filters.fechaHasta) {
       const fechaDesde = filters.fechaDesde ? new Date(filters.fechaDesde) : undefined;
       const fechaHasta = filters.fechaHasta ? new Date(filters.fechaHasta) : undefined;
       
       if (fechaDesde && fechaHasta) {
-        whereConditions.fechaTicket = Between(fechaDesde, fechaHasta);
+        queryBuilder.andWhere('ticket.fechaTicket BETWEEN :fechaDesde AND :fechaHasta', { fechaDesde, fechaHasta });
       } else if (fechaDesde) {
-        whereConditions.fechaTicket = MoreThanOrEqual(fechaDesde);
+        queryBuilder.andWhere('ticket.fechaTicket >= :fechaDesde', { fechaDesde });
       } else if (fechaHasta) {
-        whereConditions.fechaTicket = LessThanOrEqual(fechaHasta);
+        queryBuilder.andWhere('ticket.fechaTicket <= :fechaHasta', { fechaHasta });
       }
     }
 
-    const options: FindManyOptions<Participation> = {
-      where: whereConditions,
-      skip,
-      take: limit,
-      order: { createdAt: 'DESC' },
-      relations: ['user', 'associate', 'campaign'], // Incluir datos del usuario, comercio y campaña
-    };
+    // Filtro de validación
+    if (filters.validated !== undefined) {
+      queryBuilder.andWhere('ticket.validated = :validated', { validated: filters.validated });
+    }
 
-    const [participations, total] = await this.participationRepository.findAndCount(options);
+    // Ordenar y paginar
+    queryBuilder
+      .orderBy('participation.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [participations, total] = await queryBuilder.getManyAndCount();
 
     // Convertir a ResponseDto
     const participationResponses: ParticipationResponseDto[] = participations.map(participation => 
@@ -314,7 +376,7 @@ export class ParticipationsService {
   async findOne(id: string, requestingUserId?: string, canReadAll: boolean = false): Promise<ParticipationResponseDto> {
     const participation = await this.participationRepository.findOne({
       where: { id },
-      relations: ['user', 'associate', 'campaign'],
+      relations: ['ticket', 'ticket.user', 'ticket.associate', 'campaign'],
     });
 
     if (!participation) {
@@ -322,7 +384,7 @@ export class ParticipationsService {
     }
 
     // Verificar que el usuario solo puede ver sus propias participaciones (a menos que tenga permiso para leer todas)
-    if (!canReadAll && requestingUserId && participation.userId !== requestingUserId) {
+    if (!canReadAll && requestingUserId && participation.ticket.userId !== requestingUserId) {
       throw new ForbiddenException('No tienes permisos para ver esta participación');
     }
 
@@ -345,45 +407,110 @@ export class ParticipationsService {
     }
 
     const participations = await this.participationRepository.find({
-      where: { userId },
-      relations: ['associate', 'campaign'],
+      where: {},
+      relations: ['ticket', 'ticket.user', 'ticket.associate', 'campaign'],
       order: { createdAt: 'DESC' },
     });
 
-    return participations.map(participation => this.toResponseDto(participation));
+    // Filtrar por userId del ticket
+    const userParticipations = participations.filter(p => p.ticket.userId === userId);
+
+    return userParticipations.map(participation => this.toResponseDto(participation));
+  }
+
+  /**
+   * Actualizar el estado de validación de un ticket a través de una participación
+   */
+  async updateTicketValidation(
+    participationId: string,
+    validated: boolean,
+    userId: string,
+    canManage: boolean
+  ): Promise<ParticipationResponseDto> {
+    // Buscar la participación con su ticket
+    const participation = await this.participationRepository.findOne({
+      where: { id: participationId },
+      relations: ['ticket', 'ticket.user', 'ticket.associate', 'campaign'],
+    });
+
+    if (!participation) {
+      throw new NotFoundException('Participación no encontrada');
+    }
+
+    // Verificar permisos: solo administradores pueden validar/invalidar
+    if (!canManage) {
+      throw new ForbiddenException('No tienes permisos para validar/invalidar participaciones');
+    }
+
+    // Actualizar el estado de validación del ticket (afecta todas las participaciones del ticket)
+    participation.ticket.validated = validated;
+    await this.ticketRepository.save(participation.ticket);
+
+    // Recargar la participación con el ticket actualizado
+    const updatedParticipation = await this.participationRepository.findOne({
+      where: { id: participationId },
+      relations: ['ticket', 'ticket.user', 'ticket.associate', 'campaign'],
+    });
+
+    return this.toResponseDto(updatedParticipation);
   }
 
   /**
    * Método interno para convertir Participation entity a ResponseDto
    */
   private toResponseDto(participation: Participation): ParticipationResponseDto {
-    return {
+    const dto: ParticipationResponseDto = {
       id: participation.id,
-      userId: participation.userId,
-      associateId: participation.associateId,
+      ticketId: participation.ticketId,
       campaignId: participation.campaignId,
-      numeroTicket: participation.numeroTicket,
-      fechaTicket: participation.fechaTicket,
-      importeTotal: participation.importeTotal,
       createdAt: participation.createdAt,
       updatedAt: participation.updatedAt,
-      // Incluir datos relacionados si están disponibles
-      user: participation.user ? {
-        id: participation.user.id,
-        fullName: participation.user.fullName,
-        email: participation.user.email,
-        phone: participation.user.phone,
-      } : undefined,
-      associate: participation.associate ? {
-        id: participation.associate.id,
-        nombre: participation.associate.nombre,
-        direccion: participation.associate.direccion,
-      } : undefined,
-      campaign: participation.campaign ? {
+    };
+
+    // Incluir datos del ticket si está disponible
+    if (participation.ticket) {
+      dto.ticket = {
+        id: participation.ticket.id,
+        userId: participation.ticket.userId,
+        associateId: participation.ticket.associateId,
+        numeroTicket: participation.ticket.numeroTicket,
+        fechaTicket: participation.ticket.fechaTicket,
+        importeTotal: participation.ticket.importeTotal,
+        validated: participation.ticket.validated,
+        createdAt: participation.ticket.createdAt,
+        updatedAt: participation.ticket.updatedAt,
+      };
+
+      // Incluir datos del usuario si está disponible
+      if (participation.ticket.user) {
+        dto.ticket.user = {
+          id: participation.ticket.user.id,
+          fullName: participation.ticket.user.fullName,
+          email: participation.ticket.user.email,
+          phone: participation.ticket.user.phone,
+        };
+      }
+
+      // Incluir datos del comercio si está disponible
+      if (participation.ticket.associate) {
+        dto.ticket.associate = {
+          id: participation.ticket.associate.id,
+          nombre: participation.ticket.associate.nombre,
+          direccion: participation.ticket.associate.direccion,
+        };
+      }
+    }
+
+    // Incluir datos de la campaña si está disponible
+    if (participation.campaign) {
+      dto.campaign = {
         id: participation.campaign.id,
         nombre: participation.campaign.nombre,
         importeMinimo: participation.campaign.importeMinimo,
-      } : undefined,
-    };
+      };
+    }
+
+    return dto;
   }
 }
+

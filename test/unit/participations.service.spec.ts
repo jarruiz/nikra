@@ -5,14 +5,17 @@ import { NotFoundException, ConflictException, BadRequestException, ForbiddenExc
 
 import { ParticipationsService } from '../../src/participations/participations.service';
 import { Participation } from '../../src/participations/entities/participation.entity';
+import { Ticket } from '../../src/tickets/entities/ticket.entity';
 import { User } from '../../src/users/entities/user.entity';
 import { Associate } from '../../src/associates/entities/associate.entity';
 import { Campaign } from '../../src/campaigns/entities/campaign.entity';
 import { CreateParticipationDto } from '../../src/participations/dto/create-participation.dto';
+import { EmailService } from '../../src/email/email.service';
 
 describe('ParticipationsService', () => {
   let service: ParticipationsService;
   let participationRepository: Repository<Participation>;
+  let ticketRepository: Repository<Ticket>;
   let userRepository: Repository<User>;
   let associateRepository: Repository<Associate>;
   let campaignRepository: Repository<Campaign>;
@@ -23,6 +26,21 @@ describe('ParticipationsService', () => {
     create: jest.fn(),
     find: jest.fn(),
     findAndCount: jest.fn(),
+    count: jest.fn(),
+    createQueryBuilder: jest.fn(() => ({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn(),
+    })),
+  };
+
+  const mockTicketRepository = {
+    findOne: jest.fn(),
+    save: jest.fn(),
+    create: jest.fn(),
     count: jest.fn(),
   };
 
@@ -38,6 +56,10 @@ describe('ParticipationsService', () => {
     find: jest.fn(),
   };
 
+  const mockEmailService = {
+    sendParticipationNotification: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -45,6 +67,10 @@ describe('ParticipationsService', () => {
         {
           provide: getRepositoryToken(Participation),
           useValue: mockParticipationRepository,
+        },
+        {
+          provide: getRepositoryToken(Ticket),
+          useValue: mockTicketRepository,
         },
         {
           provide: getRepositoryToken(User),
@@ -58,11 +84,16 @@ describe('ParticipationsService', () => {
           provide: getRepositoryToken(Campaign),
           useValue: mockCampaignRepository,
         },
+        {
+          provide: EmailService,
+          useValue: mockEmailService,
+        },
       ],
     }).compile();
 
     service = module.get<ParticipationsService>(ParticipationsService);
     participationRepository = module.get<Repository<Participation>>(getRepositoryToken(Participation));
+    ticketRepository = module.get<Repository<Ticket>>(getRepositoryToken(Ticket));
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
     associateRepository = module.get<Repository<Associate>>(getRepositoryToken(Associate));
     campaignRepository = module.get<Repository<Campaign>>(getRepositoryToken(Campaign));
@@ -84,6 +115,7 @@ describe('ParticipationsService', () => {
     const mockUser = {
       id: userId,
       email: 'user@example.com',
+      fullName: 'Test User',
       isActive: true,
     };
 
@@ -107,28 +139,41 @@ describe('ParticipationsService', () => {
         reglaRedondeo: 'Redondeo test',
       };
 
-      mockUserRepository.findOne.mockResolvedValue(mockUser);
-      mockAssociateRepository.findOne.mockResolvedValue(mockAssociate);
-      mockCampaignRepository.find.mockResolvedValue([mockCampaign]); // Campaña válida encontrada
-      mockParticipationRepository.find.mockResolvedValue([]); // No hay participaciones previas
-      mockParticipationRepository.find.mockResolvedValueOnce([]); // Para verificar duplicados
-      mockParticipationRepository.count.mockResolvedValue(0); // No daily limit exceeded
-      
-      const savedParticipation = {
-        id: 'participation-id',
+      const mockTicket = {
+        id: 'ticket-id',
         userId,
-        campaignId: mockCampaign.id,
-        ...createDto,
+        associateId: createDto.associateId,
+        numeroTicket: createDto.numeroTicket,
         fechaTicket: new Date(createDto.fechaTicket),
+        importeTotal: createDto.importeTotal,
+        validated: false,
         createdAt: new Date(),
         updatedAt: new Date(),
         user: mockUser,
         associate: mockAssociate,
+      };
+
+      const savedParticipation = {
+        id: 'participation-id',
+        ticketId: mockTicket.id,
+        campaignId: mockCampaign.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ticket: mockTicket,
         campaign: mockCampaign,
       };
+
+      mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockAssociateRepository.findOne.mockResolvedValue(mockAssociate);
+      mockTicketRepository.count.mockResolvedValue(0); // No daily limit exceeded
+      mockCampaignRepository.find.mockResolvedValue([mockCampaign]); // Campaña válida encontrada
+      mockParticipationRepository.find.mockResolvedValue([]); // No hay participaciones previas del usuario en esta campaña
+      mockTicketRepository.findOne.mockResolvedValue(null); // No existe ticket previo
+      mockTicketRepository.create.mockReturnValue(mockTicket);
+      mockTicketRepository.save.mockResolvedValue(mockTicket);
       mockParticipationRepository.create.mockReturnValue(savedParticipation);
       mockParticipationRepository.save.mockResolvedValue([savedParticipation]);
-      mockParticipationRepository.find.mockResolvedValueOnce([savedParticipation]); // Para la respuesta final
+      mockParticipationRepository.find.mockResolvedValue([savedParticipation]); // Para la respuesta final
 
       // Act
       const result = await service.create(createDto, userId);
@@ -138,11 +183,14 @@ describe('ParticipationsService', () => {
       expect(mockAssociateRepository.findOne).toHaveBeenCalledWith({
         where: { id: createDto.associateId, activo: true },
       });
+      expect(mockTicketRepository.count).toHaveBeenCalled(); // Verificar límite diario de tickets
       expect(mockCampaignRepository.find).toHaveBeenCalled();
+      expect(mockTicketRepository.create).toHaveBeenCalled();
+      expect(mockTicketRepository.save).toHaveBeenCalled();
       expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
-      expect(result[0].numeroTicket).toBe(createDto.numeroTicket);
-      expect(result[0].userId).toBe(userId);
+      expect(result[0].ticketId).toBe(mockTicket.id);
+      expect(result[0].ticket?.numeroTicket).toBe(createDto.numeroTicket);
     });
 
     it('should throw NotFoundException when user does not exist', async () => {
@@ -166,15 +214,15 @@ describe('ParticipationsService', () => {
       );
     });
 
-    it('should throw ConflictException when ticket already exists', async () => {
+    it('should throw ForbiddenException when daily limit exceeded', async () => {
       // Arrange
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockAssociateRepository.findOne.mockResolvedValue(mockAssociate);
-      mockParticipationRepository.findOne.mockResolvedValue({ id: 'existing' });
+      mockTicketRepository.count.mockResolvedValue(5); // 5 tickets already
 
       // Act & Assert
       await expect(service.create(createDto, userId)).rejects.toThrow(
-        ConflictException,
+        ForbiddenException,
       );
     });
 
@@ -183,7 +231,7 @@ describe('ParticipationsService', () => {
       const futureDto = { ...createDto, fechaTicket: '2026-01-01' };
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockAssociateRepository.findOne.mockResolvedValue(mockAssociate);
-      mockParticipationRepository.findOne.mockResolvedValue(null);
+      mockTicketRepository.count.mockResolvedValue(0);
 
       // Act & Assert
       await expect(service.create(futureDto, userId)).rejects.toThrow(
@@ -196,24 +244,11 @@ describe('ParticipationsService', () => {
       const oldDto = { ...createDto, fechaTicket: '2020-01-01' };
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockAssociateRepository.findOne.mockResolvedValue(mockAssociate);
-      mockParticipationRepository.findOne.mockResolvedValue(null);
+      mockTicketRepository.count.mockResolvedValue(0);
 
       // Act & Assert
       await expect(service.create(oldDto, userId)).rejects.toThrow(
         BadRequestException,
-      );
-    });
-
-    it('should throw ForbiddenException when daily limit exceeded', async () => {
-      // Arrange
-      mockUserRepository.findOne.mockResolvedValue(mockUser);
-      mockAssociateRepository.findOne.mockResolvedValue(mockAssociate);
-      mockParticipationRepository.findOne.mockResolvedValue(null);
-      mockParticipationRepository.count.mockResolvedValue(5); // 5 participations already
-
-      // Act & Assert
-      await expect(service.create(createDto, userId)).rejects.toThrow(
-        ForbiddenException,
       );
     });
   });
@@ -221,14 +256,15 @@ describe('ParticipationsService', () => {
   describe('findAll', () => {
     it('should return paginated participations', async () => {
       // Arrange
-      const mockParticipations = [
-        { id: '1', userId: 'user-1' },
-        { id: '2', userId: 'user-2' },
-      ];
-      mockParticipationRepository.findAndCount.mockResolvedValue([
-        mockParticipations,
-        2,
-      ]);
+      const queryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      };
+      mockParticipationRepository.createQueryBuilder.mockReturnValue(queryBuilder);
 
       // Act
       const result = await service.findAll({ page: 1, limit: 10 }, 'user-1');
@@ -245,10 +281,15 @@ describe('ParticipationsService', () => {
     it('should return participation when found', async () => {
       // Arrange
       const participationId = 'participation-id';
-      const mockParticipation = {
-        id: participationId,
+      const mockTicket = {
+        id: 'ticket-id',
         userId: 'user-1',
         numeroTicket: 'T-001',
+      };
+      const mockParticipation = {
+        id: participationId,
+        ticketId: mockTicket.id,
+        ticket: mockTicket,
       };
       mockParticipationRepository.findOne.mockResolvedValue(mockParticipation);
 
@@ -258,9 +299,10 @@ describe('ParticipationsService', () => {
       // Assert
       expect(mockParticipationRepository.findOne).toHaveBeenCalledWith({
         where: { id: participationId },
-        relations: ['user', 'associate', 'campaign'],
+        relations: ['ticket', 'ticket.user', 'ticket.associate', 'campaign'],
       });
       expect(result.id).toBe(participationId);
+      expect(result.ticketId).toBe(mockTicket.id);
     });
 
     it('should throw NotFoundException when participation not found', async () => {
