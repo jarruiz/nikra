@@ -15,7 +15,7 @@ services:
     branch: main  # Rama de Git que se desplegará
     buildCommand: npm install --include=dev && npx nest build
     startCommand: ./scripts/start-without-migrations.sh
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     
     # Variables de entorno
     envVars:
