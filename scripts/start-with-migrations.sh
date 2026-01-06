@@ -91,16 +91,24 @@ echo "  - Database: ${DB_DATABASE}"
 echo "  - Username: ${DB_USERNAME}"
 echo "  - SSL: Habilitado (producción)"
 
-# Delay inicial para bases de datos en modo sleep (free tier)
+# Delay inicial y test de conexión para bases de datos en modo sleep (free tier)
 if [[ "$DB_HOST" == *"render.com"* ]]; then
-    log_warning "Base de datos de Render detectada. Esperando 5 segundos para activación (modo sleep)..."
-    sleep 5
+    log_warning "Base de datos de Render detectada. Esperando 10 segundos para activación (modo sleep)..."
+    sleep 10
+    
+    # Intentar ping a la base de datos para verificar conectividad
+    log_info "Verificando conectividad con la base de datos..."
+    if command -v pg_isready &> /dev/null; then
+        pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USERNAME" -d "$DB_DATABASE" || log_warning "pg_isready falló, pero continuando..."
+    else
+        log_warning "pg_isready no disponible, saltando test de conexión"
+    fi
 fi
 
 # Ejecutar migraciones con captura de salida y reintentos
 MIGRATION_START=$(date +%s)
-MAX_RETRIES=3
-RETRY_DELAY=5
+MAX_RETRIES=5
+RETRY_DELAY=10
 RETRY_COUNT=0
 MIGRATION_OUTPUT=""
 
