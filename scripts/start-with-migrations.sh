@@ -83,36 +83,68 @@ fi
 
 log_info "Validación de variables de entorno: OK"
 
-# Ejecutar migraciones con captura de salida
+# Ejecutar migraciones con captura de salida y reintentos
 MIGRATION_START=$(date +%s)
-MIGRATION_OUTPUT=$(npm run migration:run 2>&1) || {
-    MIGRATION_END=$(date +%s)
-    MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
+MAX_RETRIES=3
+RETRY_DELAY=5
+RETRY_COUNT=0
+MIGRATION_OUTPUT=""
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if [ $RETRY_COUNT -gt 0 ]; then
+        log_warning "Reintentando migraciones (intento $RETRY_COUNT de $MAX_RETRIES)..."
+        sleep $RETRY_DELAY
+    fi
+    
+    MIGRATION_OUTPUT=$(npm run migration:run 2>&1) && {
+        # Éxito
+        MIGRATION_END=$(date +%s)
+        MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
+        log_success "Migraciones ejecutadas correctamente"
+        echo -e "${GREEN}⏱️  Duración: ${MIGRATION_DURATION} segundos${NC}"
+        echo -e "${GREEN}⏰ Fin: $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
+        break
+    }
+    
+    RETRY_COUNT=$((RETRY_COUNT + 1))
     
     # Detectar errores específicos de conexión
-    if echo "$MIGRATION_OUTPUT" | grep -q "ENOTFOUND\|getaddrinfo"; then
-        log_warning "Error de conexión a la base de datos detectado"
+    if echo "$MIGRATION_OUTPUT" | grep -q "Connection terminated unexpectedly\|ENOTFOUND\|getaddrinfo\|ECONNREFUSED"; then
+        log_warning "Error de conexión a la base de datos detectado (intento $RETRY_COUNT de $MAX_RETRIES)"
+        if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+            continue
+        fi
         echo -e "${YELLOW}Detalles del error:${NC}"
-        echo "$MIGRATION_OUTPUT" | grep -i "error\|ENOTFOUND\|getaddrinfo" | head -5
+        echo "$MIGRATION_OUTPUT" | grep -i "error\|ENOTFOUND\|getaddrinfo\|Connection terminated" | head -5
         echo ""
-        error_exit "No se pudo conectar a la base de datos. Verifica que:
+        error_exit "No se pudo conectar a la base de datos después de $MAX_RETRIES intentos. Verifica que:
   1. La variable DB_HOST tenga el formato correcto (debe incluir el dominio completo)
   2. La base de datos esté vinculada correctamente al servicio web en Render
   3. Las variables de entorno estén configuradas correctamente en Render Dashboard
+  4. La base de datos no esté en modo sleep (si es free tier, puede tardar en activarse)
   Hostname actual: ${DB_HOST}"
     fi
     
-    # Otro tipo de error
+    # Si es el último intento, mostrar el error completo
+    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        MIGRATION_END=$(date +%s)
+        MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
+        echo -e "${RED}Salida del error:${NC}"
+        echo "$MIGRATION_OUTPUT"
+        error_exit "Las migraciones fallaron después de ${MIGRATION_DURATION} segundos y $MAX_RETRIES intentos. No se iniciará el backend."
+    fi
+done
+
+# Si llegamos aquí sin éxito, es un error
+if [ $RETRY_COUNT -eq $MAX_RETRIES ] && [ -n "$MIGRATION_OUTPUT" ]; then
+    MIGRATION_END=$(date +%s)
+    MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
     echo -e "${RED}Salida del error:${NC}"
     echo "$MIGRATION_OUTPUT"
     error_exit "Las migraciones fallaron después de ${MIGRATION_DURATION} segundos. No se iniciará el backend."
-}
+fi
 
-MIGRATION_END=$(date +%s)
-MIGRATION_DURATION=$((MIGRATION_END - MIGRATION_START))
-log_success "Migraciones ejecutadas correctamente"
-echo -e "${GREEN}⏱️  Duración: ${MIGRATION_DURATION} segundos${NC}"
-echo -e "${GREEN}⏰ Fin: $(date -u +"%Y-%m-%d %H:%M:%S UTC")${NC}"
+# La duración y éxito ya se muestran en el loop de reintentos
 
 separator
 

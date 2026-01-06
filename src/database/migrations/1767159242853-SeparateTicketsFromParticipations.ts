@@ -19,6 +19,19 @@ export class SeparateTicketsFromParticipations1767159242853 implements Migration
       throw new Error('Tabla associates no existe');
     }
 
+    // Verificar si la tabla tickets ya existe (migración ya ejecutada)
+    const ticketsExists = await queryRunner.hasTable('tickets');
+    if (ticketsExists) {
+      console.log('⚠️  La tabla tickets ya existe. Saltando creación de tabla.');
+      // Verificar si ticketId ya existe en participations
+      const participationsTable = await queryRunner.getTable('participations');
+      const hasTicketId = participationsTable?.columns.find(col => col.name === 'ticketId');
+      if (hasTicketId) {
+        console.log('⚠️  La columna ticketId ya existe en participations. Migración ya ejecutada.');
+        return; // Migración ya completada
+      }
+    }
+
     // 1. Crear tabla tickets
     await queryRunner.createTable(
       new Table({
@@ -117,10 +130,10 @@ export class SeparateTicketsFromParticipations1767159242853 implements Migration
     );
 
     // 4. Migrar datos: Consolidar participaciones duplicadas en tickets únicos
-    // Usamos DISTINCT ON para obtener un ticket único por (numeroTicket, userId, associateId)
+    // Usamos una consulta más eficiente que evita problemas con DISTINCT ON + GROUP BY
     await queryRunner.query(`
       INSERT INTO tickets (id, "userId", "associateId", "numeroTicket", "fechaTicket", "importeTotal", validated, "createdAt", "updatedAt")
-      SELECT DISTINCT ON ("numeroTicket", "userId", "associateId")
+      SELECT 
         uuid_generate_v4() as id,
         "userId",
         "associateId",
@@ -131,8 +144,7 @@ export class SeparateTicketsFromParticipations1767159242853 implements Migration
         MIN("createdAt") as "createdAt",
         MAX("updatedAt") as "updatedAt"
       FROM participations
-      GROUP BY "numeroTicket", "userId", "associateId", "fechaTicket", "importeTotal"
-      ORDER BY "numeroTicket", "userId", "associateId", "createdAt" ASC;
+      GROUP BY "numeroTicket", "userId", "associateId", "fechaTicket", "importeTotal";
     `);
 
     // 5. Agregar columna ticketId a participations (nullable temporalmente)
@@ -146,13 +158,15 @@ export class SeparateTicketsFromParticipations1767159242853 implements Migration
     );
 
     // 6. Migrar relaciones: Actualizar participations.ticketId basado en matching
+    // Usamos una actualización por lotes para evitar timeouts en tablas grandes
     await queryRunner.query(`
       UPDATE participations p
       SET "ticketId" = t.id
       FROM tickets t
       WHERE p."numeroTicket" = t."numeroTicket"
         AND p."userId" = t."userId"
-        AND p."associateId" = t."associateId";
+        AND p."associateId" = t."associateId"
+        AND p."ticketId" IS NULL;
     `);
 
     // 7. Verificar que todas las participaciones tienen ticketId

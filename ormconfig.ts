@@ -17,4 +17,18 @@ export default new DataSource({
   synchronize: false, // Las migraciones controlan el esquema
   logging: process.env.NODE_ENV === 'development',
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Configuración de conexión para migraciones largas
+  extra: {
+    // Timeout de conexión extendido para migraciones complejas
+    connectionTimeoutMillis: 60000, // 60 segundos
+    query_timeout: 120000, // 120 segundos para queries
+    statement_timeout: 120000, // 120 segundos para statements
+    // Pool de conexiones
+    max: 10,
+    min: 2,
+    idleTimeoutMillis: 30000,
+    // Reintentos
+    retryAttempts: 3,
+    retryDelay: 3000,
+  },
 });
