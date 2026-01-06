@@ -83,6 +83,20 @@ fi
 
 log_info "Validación de variables de entorno: OK"
 
+# Mostrar configuración de conexión (sin password)
+log_info "Configuración de conexión a BD:"
+echo "  - Host: ${DB_HOST}"
+echo "  - Port: ${DB_PORT}"
+echo "  - Database: ${DB_DATABASE}"
+echo "  - Username: ${DB_USERNAME}"
+echo "  - SSL: Habilitado (producción)"
+
+# Delay inicial para bases de datos en modo sleep (free tier)
+if [[ "$DB_HOST" == *"render.com"* ]]; then
+    log_warning "Base de datos de Render detectada. Esperando 5 segundos para activación (modo sleep)..."
+    sleep 5
+fi
+
 # Ejecutar migraciones con captura de salida y reintentos
 MIGRATION_START=$(date +%s)
 MAX_RETRIES=3
