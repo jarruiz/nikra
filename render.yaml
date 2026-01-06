@@ -14,7 +14,7 @@ services:
     plan: starter  # Cambia a standard o professional según necesites
     branch: main  # Rama de Git que se desplegará
     buildCommand: npm install --include=dev && npx nest build
-    startCommand: ./scripts/start-with-migrations.sh
+    startCommand: ./scripts/start-without-migrations.sh
     healthCheckPath: /api/health
     
     # Variables de entorno
