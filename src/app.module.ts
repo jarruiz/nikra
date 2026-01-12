@@ -21,6 +21,7 @@ import { ExportModule } from './export/export.module';
 import { UploadModule } from './upload/upload.module';
 import { RolesModule } from './roles/roles.module';
 import { TicketsModule } from './tickets/tickets.module';
+import { StatsModule } from './stats/stats.module';
 
 // Entidades
 import { User } from './users/entities/user.entity';
@@ -88,6 +89,7 @@ import { Permission } from './roles/entities/permission.entity';
     ExportModule,
     UploadModule,
     TicketsModule,
+    StatsModule,
   ],
 })
 export class AppModule {}
